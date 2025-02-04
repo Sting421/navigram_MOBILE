@@ -24,16 +24,15 @@
 
     <ImageButton
         android:id="@+id/loginWithGoogle"
-        android:layout_width="339dp"
-        android:layout_height="73dp"
+        android:layout_width="349dp"
+        android:layout_height="85dp"
         android:backgroundTint="@android:color/transparent"
-        android:scaleType="fitXY"
+        android:scaleType="centerCrop"
         app:layout_constraintBottom_toTopOf="@+id/username"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.486"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/imageView"
-        app:layout_constraintVertical_bias="0.317"
+        app:layout_constraintVertical_bias="0.244"
         app:srcCompat="@drawable/continuegoogle" />
 
     <EditText
@@ -45,17 +44,19 @@
         android:autofillHints="@string/prompt_email"
         android:background="@drawable/edit_text_border"
         android:hint="@string/prompt_email"
+        android:textColorHint="#994B0082"
         android:inputType="textEmailAddress"
         android:paddingStart="20dp"
         android:paddingTop="10dp"
         android:paddingBottom="10dp"
         android:selectAllOnFocus="true"
+        android:textColor="@color/black"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintHorizontal_bias="0.333"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView2"
-        app:layout_constraintVertical_bias="0.03" />
+        app:layout_constraintVertical_bias="0.0" />
 
     <Button
         android:id="@+id/signUp"
@@ -83,6 +84,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
         android:text="Already have an account?"
+        android:textColor="@color/black"
         android:textSize="16sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -95,15 +97,16 @@
         android:id="@+id/textView2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="1dp"
         android:padding="10dp"
         android:text="- or continue with -"
+        android:textColor="@color/black"
         app:layout_constraintBottom_toTopOf="@+id/username"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.498"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/loginWithGoogle"
-        app:layout_constraintVertical_bias="0.12" />
+        app:layout_constraintVertical_bias="0.0" />
 
     <EditText
         android:id="@+id/username"
@@ -114,15 +117,17 @@
         android:hint="@string/prompt_username"
         android:inputType="textEmailAddress"
         android:paddingStart="20dp"
+        android:textColorHint="#994B0082"
         android:paddingTop="10dp"
         android:paddingBottom="10dp"
         android:selectAllOnFocus="true"
+        android:textColor="@color/black"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.49"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.558" />
+        app:layout_constraintVertical_bias="0.514" />
 
     <EditText
         android:id="@+id/confirm_password"
@@ -135,9 +140,11 @@
         android:imeOptions="actionDone"
         android:inputType="textPassword"
         android:paddingStart="20dp"
+        android:textColorHint="#994B0082"
         android:paddingTop="10dp"
         android:paddingBottom="10dp"
         android:selectAllOnFocus="true"
+        android:textColor="@color/black"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.47"
@@ -156,9 +163,11 @@
         android:imeOptions="actionDone"
         android:inputType="textPassword"
         android:paddingStart="20dp"
+        android:textColorHint="#994B0082"
         android:paddingTop="10dp"
         android:paddingBottom="10dp"
         android:selectAllOnFocus="true"
+        android:textColor="@color/black"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.47"
@@ -191,6 +200,7 @@
         android:layout_marginTop="10dp"
         android:padding="5dp"
         android:text="Sign Up to start with NaviGram"
+        android:textColor="@color/black"
         android:textSize="20sp"
         app:layout_constraintBottom_toTopOf="@+id/username"
         app:layout_constraintEnd_toEndOf="parent"

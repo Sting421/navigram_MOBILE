@@ -7,6 +7,15 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.navigram.ui.login.LoginActivity
+import com.example.navigram.ui.login.getToken
+
+import android.content.Context
+import com.example.navigram.ui.LogoutTest
+import com.example.navigram.ui.SignUp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,9 +34,52 @@ class MainActivity : AppCompatActivity() {
                 e.printStackTrace()
             }
             runOnUiThread {
-                startActivity(Intent(this, LoginActivity::class.java))
+                if(getToken(this@MainActivity)!= null){
+                    startActivity(Intent(this, LogoutTest::class.java))
+                }
+                else
+                    startActivity(Intent(this, LoginActivity::class.java))
                 finish() // Close MainActivity after launching LoginRegisterAct
+
             }
+
         }.start()
     }
+
+    private suspend fun validateToken(context: Context): String {
+        return withContext(Dispatchers.IO) {
+            val baseUrl = context.getString(R.string.BaseURL) // Retrieve base URL before the coroutine
+            val url = URL("${baseUrl}/api/auth/me")
+
+            (url.openConnection() as HttpURLConnection).run {
+                requestMethod = "GET"
+                connectTimeout = 10000
+                readTimeout = 10000
+                setRequestProperty("Content-Type", "application/json")
+                doOutput = true // Enable output for POST request, even if no body is sent
+
+                try {
+                    val response = inputStream.bufferedReader().use { it.readText() }
+                    println("HTTP Response Code: $responseCode") // Debugging
+                    println("API Response: $response") // Debugging
+
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        println("Auth is valid: $response") // Use Log.d for debugging in Android
+                        response
+                    } else {
+                        "Error: $responseCode - $response"
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    if(responseCode == 500)
+                        "test"
+                    else
+                        "Failed to fetch Data"
+                } finally {
+                    disconnect()
+                }
+            }
+        }
+    }
 }
+

@@ -26,6 +26,19 @@ import java.net.URL
 import org.json.JSONObject
 import java.io.OutputStreamWriter
 
+import android.content.Context
+import android.os.Build
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
+import com.example.navigram.MainActivity
+import com.example.navigram.ui.LogoutTest
+import com.example.navigram.ui.SignUpResponse
+import java.io.IOException
+import java.net.MalformedURLException
+import java.net.SocketTimeoutException
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+
 data class LoginResponse(
     val token: String,
     val username:String,
@@ -49,7 +62,7 @@ class LoginActivity : AppCompatActivity() {
         val login = binding.login
         val signUp = binding.signUp
         val loading = binding.loading
-
+        val loginasGuest = binding.loginasGuest
         loginViewModel = ViewModelProvider(this, LoginViewModelFactory())
             .get(LoginViewModel::class.java)
 
@@ -67,21 +80,7 @@ class LoginActivity : AppCompatActivity() {
             }
         })
 
-        loginViewModel.loginResult.observe(this@LoginActivity, Observer {
-            val loginResult = it ?: return@Observer
 
-            loading.visibility = View.GONE
-            if (loginResult.error != null) {
-                showLoginFailed(loginResult.error)
-            }
-            if (loginResult.success != null) {
-                updateUiWithUser(loginResult.success)
-            }
-            setResult(Activity.RESULT_OK)
-
-            // Complete and destroy login activity once successful
-            finish()
-        })
 
         username.afterTextChanged {
             loginViewModel.loginDataChanged(
@@ -113,54 +112,142 @@ class LoginActivity : AppCompatActivity() {
                 loading.visibility = View.VISIBLE
                 val intent = Intent(this@LoginActivity, SignUp::class.java)
                 startActivity(intent)
-                finish() // Close MainActivity after launching SignUp
+                loading.visibility = View.GONE
+
+            }
+            loginasGuest?.setOnClickListener {
+                loading.visibility = View.VISIBLE
+
+                CoroutineScope(Dispatchers.Main).launch {
+                    val result = registerToNetworkAsGuest(this@LoginActivity)
+                    try {
+                        if (result.startsWith("{")) {
+                            val post = Gson().fromJson(result, SignUpResponse::class.java)
+                            val intent = Intent(this@LoginActivity, LogoutTest::class.java)
+                            saveToken(this@LoginActivity,post.token,post.username)
+                            startActivity(intent)
+                        } else {
+                            Toast.makeText(this@LoginActivity, "Failed to Register", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: JsonSyntaxException) {
+                        Toast.makeText(this@LoginActivity, "Failed to parse API response", Toast.LENGTH_LONG)
+                            .show()
+                    }
+                    loading.visibility = View.GONE
+
+                }
             }
 
             login.setOnClickListener {
                 loading.visibility = View.VISIBLE
 
-                // Launch coroutine for network call
+//                Toast.makeText(this@LoginActivity, "${isConnectedToWiFi(this@LoginActivity)}", Toast.LENGTH_LONG).show()
+//                 Launch coroutine for network call
                 CoroutineScope(Dispatchers.Main).launch {
-                    val result = loginToNetwork(username.text.toString(), password.text.toString())
+                    val result = loginToNetwork(this@LoginActivity,username.text.toString(), password.text.toString())
+                    Toast.makeText(this@LoginActivity, result, Toast.LENGTH_LONG).show()
                     if (result.startsWith("{")) {
                         try {
-                            val post = Gson().fromJson(result, LoginResponse::class.java)
-                            print("The status is ${post.status}")
-                            if(post.status == 429){
-                                Toast.makeText(this@LoginActivity, "Invalid credentials", Toast.LENGTH_LONG).show()
-                            }
-                            else{
+                                val post = Gson().fromJson(result, LoginResponse::class.java)
+                                //token storage
+                                saveToken(context,post.token,post.username)
                                 Toast.makeText(this@LoginActivity, "Hello ${post.username}, Welcome to Navigram!", Toast.LENGTH_LONG).show()
-                                val intent = Intent(this@LoginActivity, DashboardFragment::class.java)
+                                val intent = Intent(this@LoginActivity, LogoutTest::class.java)
                                 startActivity(intent)
-                                finish() // Close MainActivity after launching SignUp
-                            }
-                            loading.visibility = View.GONE
+                                finish()
+
                         } catch (e: JsonSyntaxException) {
                             e.printStackTrace()
                             Toast.makeText(this@LoginActivity, "Failed to parse API response", Toast.LENGTH_LONG).show()
                             _text.postValue("Failed to parse API response")
                         }
                     } else {
-                        _text.postValue("Unexpected response: $result")
+                        Toast.makeText(this@LoginActivity, result, Toast.LENGTH_LONG).show()
                     }
-
-
+                loading.visibility = View.GONE
                 }
-
-
             }
         }
     }
 
+
+    fun isConnectedToWiFi(context: Context): Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+
+        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+    }
+
+
     // Moved function outside onCreate()
-    private suspend fun loginToNetwork(username: String, password: String): String {
+    private suspend fun loginToNetwork(context: Context, username: String, password: String): String {
         return withContext(Dispatchers.IO) {
-            val url = URL("${getString(R.string.BaseURL)}api/auth/login")
+            try {
+                val baseUrl = context.getString(R.string.BaseURL) // Ensure it's accessed safely
+                val url = URL("${baseUrl}api/auth/login")
+
+                (url.openConnection() as HttpURLConnection).run {
+                    requestMethod = "POST"
+                    connectTimeout = 5000 // Increase timeout to avoid premature failures
+                    readTimeout = 5000
+                    setRequestProperty("Content-Type", "application/json")
+                    doOutput = true
+
+                    val jsonPayload = JSONObject().apply {
+                        put("username", username)
+                        put("password", password)
+                    }
+
+                    try {
+                        outputStream.use { os ->
+                            OutputStreamWriter(os).use { writer ->
+                                writer.write(jsonPayload.toString())
+                                writer.flush()
+                            }
+                        }
+
+                        val response = inputStream.bufferedReader().use { it.readText() }
+                        println("HTTP Response Code: $responseCode")
+                        println("API Response: $response")
+
+                        return@run if (responseCode == HttpURLConnection.HTTP_OK) {
+                            response
+                        } else if (responseCode == 429) {
+                            val jsonResponse = JSONObject(response)
+                            val errorMessage = jsonResponse.optString("message", "Unknown error")
+                            "Error: $errorMessage"
+                        } else {
+                            "Error: $responseCode - $response"
+                        }
+                    } catch (e: IOException) {
+                        e.printStackTrace()
+                        return@run "Network error: ${e.localizedMessage}"
+                    } finally {
+                        disconnect()
+                    }
+                }
+            } catch (e: MalformedURLException) {
+                e.printStackTrace()
+                return@withContext "Invalid URL"
+            } catch (e: SocketTimeoutException) {
+                e.printStackTrace()
+                return@withContext "Network timeout. Please try again."
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return@withContext "Unexpected error: ${e.localizedMessage}"
+            }
+        }
+    }
+
+
+    private suspend fun loginToNetworkAsGuest(username: String, password: String): String {
+        return withContext(Dispatchers.IO) {
+            val url = URL("${getString(R.string.BaseURL)}/api/guest/auth/login")
             (url.openConnection() as HttpURLConnection).run {
                 requestMethod = "POST"
-                connectTimeout = 1000
-                readTimeout = 1000
+                connectTimeout = 100000
+                readTimeout = 100000
                 setRequestProperty("Content-Type", "application/json")
                 doOutput = true // Enable output for request body
 
@@ -217,6 +304,41 @@ class LoginActivity : AppCompatActivity() {
     private fun showLoginFailed(@StringRes errorString: Int) {
         Toast.makeText(applicationContext, errorString, Toast.LENGTH_SHORT).show()
     }
+    private suspend fun registerToNetworkAsGuest(context: Context): String {
+        return withContext(Dispatchers.IO) {
+            val baseUrl = context.getString(R.string.BaseURL) // Retrieve base URL before the coroutine
+            val url = URL("${baseUrl}api/guest/auth/register")
+
+            (url.openConnection() as HttpURLConnection).run {
+                requestMethod = "POST"
+                connectTimeout = 10000
+                readTimeout = 10000
+                setRequestProperty("Content-Type", "application/json")
+                doOutput = true // Enable output for POST request, even if no body is sent
+
+                try {
+                    val response = inputStream.bufferedReader().use { it.readText() }
+                    println("HTTP Response Code: $responseCode") // Debugging
+                    println("API Response: $response") // Debugging
+
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        println("NetworkGuest created: $response") // Use Log.d for debugging in Android
+                        response
+                    } else {
+                        "Error: $responseCode - $response"
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    if(responseCode == 500)
+                        "User already exist"
+                    else
+                        "Failed to fetch Data"
+                } finally {
+                    disconnect()
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -232,4 +354,82 @@ fun EditText.afterTextChanged(afterTextChanged: (String) -> Unit) {
 
         override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {}
     })
+}
+
+
+fun saveToken(context: Context, token: String,username: String) {
+    val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+
+    val sharedPreferences = EncryptedSharedPreferences.create(
+        context,
+        "secure_prefs",
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
+    val sharedPreferencesUser = EncryptedSharedPreferences.create(
+        context,
+        "secure_prefs_username",
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
+    val sharedPreferencesPassword = EncryptedSharedPreferences.create(
+        context,
+        "secure_prefs_username",
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
+
+    with(sharedPreferences.edit()) {
+        putString("auth_token", token)
+        apply()
+    }
+    with(sharedPreferencesUser.edit()) {
+        putString("auth_username", username)
+        apply()
+    }
+//    with(sharedPreferencesPassword.edit()) {
+//        putString("auth_password", password)
+//        apply()
+//    }
+}
+
+fun getToken(context: Context): String? {
+    val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+
+    val sharedPreferences = EncryptedSharedPreferences.create(
+        context,
+        "secure_prefs",
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
+
+    return sharedPreferences.getString("auth_token", null)
+}
+
+fun clearToken(context: Context) {
+    val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+
+    val sharedPreferences = EncryptedSharedPreferences.create(
+        context,
+        "secure_prefs",
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
+
+    with(sharedPreferences.edit()) {
+        remove("auth_token")
+        apply()
+    }
+
 }

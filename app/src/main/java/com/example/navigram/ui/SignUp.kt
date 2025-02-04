@@ -1,6 +1,7 @@
 package com.example.navigram.ui
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -8,9 +9,13 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModelProvider
+import com.example.navigram.MainActivity
 import com.example.navigram.R
 import com.example.navigram.databinding.ActivitySignUpBinding
 import com.example.navigram.ui.login.LoginActivity
+import com.example.navigram.ui.login.LoginResponse
+import com.example.navigram.ui.login.clearToken
+import com.example.navigram.ui.login.saveToken
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import kotlinx.coroutines.CoroutineScope
@@ -46,7 +51,13 @@ class SignUp : AppCompatActivity() {
         val confirmPassword = binding.confirmPassword
         val signUpButton = binding.signUp
         val loading = binding.loading
+        val loginBtn = binding.login
 
+        loginBtn.setOnClickListener {
+            val intent = Intent(this@SignUp, LoginActivity::class.java)
+            startActivity(intent)
+            finish()
+        }
         // Sign-Up Click Listener
         signUpButton.setOnClickListener {
             val user = username.text.toString().trim()
@@ -72,20 +83,22 @@ class SignUp : AppCompatActivity() {
 
                 if (result.startsWith("{")) {
                     try {
-                        val response = Gson().fromJson(result, SignUpResponse::class.java)
-                        if (response.status == 201) {
+                        val post = Gson().fromJson(result, SignUpResponse::class.java)
+                        if (post.status == 200) {
                             Toast.makeText(this@SignUp, "Account Created Successfully!", Toast.LENGTH_LONG).show()
                             val intent = Intent(this@SignUp, LoginActivity::class.java)
                             startActivity(intent)
                             finish()
                         } else {
-                            Toast.makeText(this@SignUp, "Error: ${response.status}", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@SignUp, "Error: ${post.status}", Toast.LENGTH_LONG).show()
                         }
                     } catch (e: JsonSyntaxException) {
                         Toast.makeText(this@SignUp, "Failed to parse API response", Toast.LENGTH_LONG).show()
                     }
-                } else {
-                    Toast.makeText(this@SignUp, "Unexpected response: $result", Toast.LENGTH_LONG).show()
+                }
+
+                else {
+                    Toast.makeText(this@SignUp, result, Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -116,17 +129,23 @@ class SignUp : AppCompatActivity() {
 
                     val response = inputStream.bufferedReader().use { it.readText() }
 
-                    if (responseCode == HttpURLConnection.HTTP_CREATED) {
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
                         response
                     } else {
                         "Error: $responseCode - $response"
                     }
                 } catch (e: Exception) {
-                    "Failed to fetch data"
+                    if(responseCode == 500)
+                        "User already exist"
+                    else
+                        "Failed to fetch Data"
                 } finally {
                     disconnect()
                 }
             }
         }
     }
+
+
+
 }
