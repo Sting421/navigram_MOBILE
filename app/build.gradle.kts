@@ -65,8 +65,17 @@ dependencies {
     // Token storage
     implementation(libs.security.crypto)
     implementation(libs.androidx.annotation)
+    implementation(libs.play.services.location)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+
+    // CameraX dependencies
+    implementation(libs.camera.core)
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
+
 }

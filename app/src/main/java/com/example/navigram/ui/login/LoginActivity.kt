@@ -1,6 +1,5 @@
 package com.example.navigram.ui.login
 
-import android.app.Activity
 import android.content.Intent
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -17,7 +16,6 @@ import androidx.lifecycle.MutableLiveData
 import com.example.navigram.databinding.ActivityLoginBinding
 import com.example.navigram.R
 import com.example.navigram.ui.SignUp
-import com.example.navigram.ui.dashboard.DashboardFragment
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import kotlinx.coroutines.*
@@ -27,11 +25,9 @@ import org.json.JSONObject
 import java.io.OutputStreamWriter
 
 import android.content.Context
-import android.os.Build
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import com.example.navigram.MainActivity
-import com.example.navigram.ui.LogoutTest
+import com.example.navigram.ui.CameraCapture
 import com.example.navigram.ui.SignUpResponse
 import java.io.IOException
 import java.net.MalformedURLException
@@ -123,7 +119,7 @@ class LoginActivity : AppCompatActivity() {
                     try {
                         if (result.startsWith("{")) {
                             val post = Gson().fromJson(result, SignUpResponse::class.java)
-                            val intent = Intent(this@LoginActivity, LogoutTest::class.java)
+                            val intent = Intent(this@LoginActivity, CameraCapture::class.java)
                             saveToken(this@LoginActivity,post.token,post.username)
                             startActivity(intent)
                         } else {
@@ -140,19 +136,17 @@ class LoginActivity : AppCompatActivity() {
 
             login.setOnClickListener {
                 loading.visibility = View.VISIBLE
-
 //                Toast.makeText(this@LoginActivity, "${isConnectedToWiFi(this@LoginActivity)}", Toast.LENGTH_LONG).show()
 //                 Launch coroutine for network call
                 CoroutineScope(Dispatchers.Main).launch {
                     val result = loginToNetwork(this@LoginActivity,username.text.toString(), password.text.toString())
-                    Toast.makeText(this@LoginActivity, result, Toast.LENGTH_LONG).show()
                     if (result.startsWith("{")) {
                         try {
                                 val post = Gson().fromJson(result, LoginResponse::class.java)
                                 //token storage
                                 saveToken(context,post.token,post.username)
                                 Toast.makeText(this@LoginActivity, "Hello ${post.username}, Welcome to Navigram!", Toast.LENGTH_LONG).show()
-                                val intent = Intent(this@LoginActivity, LogoutTest::class.java)
+                                val intent = Intent(this@LoginActivity, CameraCapture::class.java)
                                 startActivity(intent)
                                 finish()
 

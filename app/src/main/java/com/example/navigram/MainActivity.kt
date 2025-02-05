@@ -6,12 +6,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.example.navigram.ui.login.LoginActivity
-import com.example.navigram.ui.login.getToken
 
 import android.content.Context
-import com.example.navigram.ui.LogoutTest
-import com.example.navigram.ui.SignUp
+import com.example.navigram.ui.CameraCapture
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
@@ -34,13 +31,15 @@ class MainActivity : AppCompatActivity() {
                 e.printStackTrace()
             }
             runOnUiThread {
-                if(getToken(this@MainActivity)!= null){
-                    startActivity(Intent(this, LogoutTest::class.java))
-                }
-                else
-                    startActivity(Intent(this, LoginActivity::class.java))
-                finish() // Close MainActivity after launching LoginRegisterAct
+//                if(getToken(this@MainActivity)!= null){
+//                    startActivity(Intent(this, LogoutTest::class.java))
+//                }
+//                else
+//                    startActivity(Intent(this, LoginActivity::class.java))
+//                finish() // Close MainActivity after launching LoginRegisterAct
 
+                startActivity(Intent(this, CameraCapture::class.java))
+                finish()
             }
 
         }.start()
