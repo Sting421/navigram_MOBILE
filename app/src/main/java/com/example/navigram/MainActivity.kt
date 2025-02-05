@@ -9,6 +9,8 @@ import androidx.core.view.WindowInsetsCompat
 
 import android.content.Context
 import com.example.navigram.ui.CameraCapture
+import com.example.navigram.ui.Dashboard
+import com.example.navigram.ui.ui.dashboard.DashboardFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection

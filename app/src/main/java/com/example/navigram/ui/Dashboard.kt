@@ -1,4 +1,4 @@
-package com.example.navigram
+package com.example.navigram.ui
 
 import android.os.Bundle
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -7,6 +7,7 @@ import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
+import com.example.navigram.R
 import com.example.navigram.databinding.ActivityDashboardBinding
 
 class Dashboard : AppCompatActivity() {

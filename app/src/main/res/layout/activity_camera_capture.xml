@@ -7,13 +7,13 @@
     tools:context=".ui.CameraCapture">
 
     <androidx.camera.view.PreviewView
-    android:id="@+id/previewView"
-    android:layout_width="0dp"
-    android:layout_height="0dp"
-    app:layout_constraintTop_toTopOf="parent"
-    app:layout_constraintBottom_toTopOf="@+id/btnCapture"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintEnd_toEndOf="parent"/>
+        android:id="@+id/previewView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@id/btnCapture"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
 
     <ImageButton
@@ -56,5 +56,13 @@
         app:layout_constraintVertical_bias="0.032"
         app:srcCompat="@drawable/flashoff" />
 
+    <View
+        android:id="@+id/focusIndicator"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:background="@drawable/focus"
+        android:backgroundTint="@android:color/transparent"
+        android:visibility="invisible"
+        tools:ignore="MissingConstraints" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
