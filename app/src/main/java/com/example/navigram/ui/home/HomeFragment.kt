@@ -1,4 +1,4 @@
-package com.example.navigram.ui.ui.home
+package com.example.navigram.ui.home
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -39,4 +39,5 @@ class HomeFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
+
 }

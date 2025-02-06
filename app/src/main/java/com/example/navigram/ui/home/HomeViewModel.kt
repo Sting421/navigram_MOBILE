@@ -1,4 +1,4 @@
-package com.example.navigram.ui.ui.home
+package com.example.navigram.ui.home
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData

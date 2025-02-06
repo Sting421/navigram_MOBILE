@@ -31,6 +31,7 @@ import androidx.camera.core.FocusMeteringAction
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import androidx.camera.core.Camera
+import androidx.exifinterface.media.ExifInterface
 
 class CameraCapture : AppCompatActivity() {
     private var camera: Camera? = null
@@ -121,9 +122,6 @@ class CameraCapture : AppCompatActivity() {
         // Get the DCIM directory path (consider using MediaStore for API 29+)
         val dcimDirectory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "Navigram")
 
-        // Alternative: Use app-specific storage
-        // val dcimDirectory = File(getExternalFilesDir(Environment.DIRECTORY_DCIM), "Navigram")
-
         // Create the directory if it doesn't exist
         if (!dcimDirectory.exists()) {
             dcimDirectory.mkdirs()
@@ -133,47 +131,77 @@ class CameraCapture : AppCompatActivity() {
         fetchLocation { location ->
             val timestamp = System.currentTimeMillis()
 
-            val locationInfo = location?.let { "Lat: ${it.latitude}, Lon: ${it.longitude}" } ?: "No location"
+            val locationInfo = location?.let { 
+                "Lat: ${it.latitude}, Lon: ${it.longitude}" 
+            } ?: "No location"
+            
             val imageFile = File(dcimDirectory, "navigram_$timestamp.jpg")
-            // Create a Map to store metadata (local path and location info)
-            val metadataFile = File(dcimDirectory, "navigram_${timestamp}_metadata.txt")
-            // Write metadata to the file
-            try {
-                metadataFile.writeText("Local Path: ${imageFile.absolutePath}\nLocation: $locationInfo")
-
-            } catch (e: IOException) {
-                Log.e("CameraX", "Failed to write metadata: ${e.message}", e)
-            }
-
+            
             // Set up output options for capturing the photo
-
             val outputOptions = ImageCapture.OutputFileOptions.Builder(imageFile).build()
             imageCapture.takePicture(outputOptions, ContextCompat.getMainExecutor(this),
                 object : ImageCapture.OnImageSavedCallback {
                     override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                        val msg = "Photo saved: ${imageFile.name}\nLocation: $locationInfo"
-                        Toast.makeText(this@CameraCapture, msg, Toast.LENGTH_LONG).show()
+                        try {
+                            // Write metadata to Exif
+                            val exif = ExifInterface(imageFile.absolutePath)
+                            
+                            // Write custom metadata
+                            exif.setAttribute(
+                                ExifInterface.TAG_USER_COMMENT, 
+                                """
+                                Navigram Image
+                                Timestamp: $timestamp
+                                Location: $locationInfo
+                                """.trimIndent()
+                            )
+                            
+                            // Write GPS information if location is available
+                            location?.let {
+                                exif.setAttribute(
+                                    ExifInterface.TAG_GPS_LATITUDE, 
+                                    convertToDegreeMinuteSecond(it.latitude)
+                                )
+                                exif.setAttribute(
+                                    ExifInterface.TAG_GPS_LONGITUDE, 
+                                    convertToDegreeMinuteSecond(it.longitude)
+                                )
+                                exif.setAttribute(
+                                    ExifInterface.TAG_GPS_LATITUDE_REF, 
+                                    if (it.latitude >= 0) "N" else "S"
+                                )
+                                exif.setAttribute(
+                                    ExifInterface.TAG_GPS_LONGITUDE_REF, 
+                                    if (it.longitude >= 0) "E" else "W"
+                                )
+                            }
+                            
+                            exif.saveAttributes()
+                            
+                            val msg = "Photo saved: ${imageFile.name}\n$locationInfo"
+                            Toast.makeText(this@CameraCapture, msg, Toast.LENGTH_LONG).show()
+                        } catch (e: IOException) {
+                            Log.e("CameraCapture", "Failed to write Exif metadata: ${e.message}", e)
+                        }
                     }
+                    
                     override fun onError(exc: ImageCaptureException) {
                         Log.e("CameraX", "Photo capture failed: ${exc.message}", exc)
                     }
                 })
-        } // Closing brace for fetchLocation lambda
-    }
-    private fun showFocusIndicator(x: Float, y: Float) {
-        // Position indicator view at touch point
-        focusIndicatorView.translationX = x - focusIndicatorView.width / 2
-        focusIndicatorView.translationY = y - focusIndicatorView.height / 2
-        focusIndicatorView.visibility = View.VISIBLE
-
-        // Hide after 1 second
-        Handler(Looper.getMainLooper()).postDelayed({
-            focusIndicatorView.visibility = View.INVISIBLE
-        }, 1000)
+        }
     }
 
-
-
+    // Helper function to convert decimal degrees to DMS format for Exif
+    private fun convertToDegreeMinuteSecond(decimal: Double): String {
+        val absDecimal = Math.abs(decimal)
+        val degrees = absDecimal.toInt()
+        val minutesFloat = (absDecimal - degrees) * 60
+        val minutes = minutesFloat.toInt()
+        val seconds = ((minutesFloat - minutes) * 60).toInt()
+        
+        return "$degrees/1,$minutes/1,$seconds/1"
+    }
 
     private fun fetchLocation(callback: (Location?) -> Unit) {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -225,6 +253,18 @@ class CameraCapture : AppCompatActivity() {
             Log.e("CameraFocus", "Camera not initialized")
             Toast.makeText(this, "Camera focus unavailable", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun showFocusIndicator(x: Float, y: Float) {
+        // Position indicator view at touch point
+        focusIndicatorView.translationX = x - focusIndicatorView.width / 2
+        focusIndicatorView.translationY = y - focusIndicatorView.height / 2
+        focusIndicatorView.visibility = View.VISIBLE
+
+        // Hide after 1 second
+        Handler(Looper.getMainLooper()).postDelayed({
+            focusIndicatorView.visibility = View.INVISIBLE
+        }, 1000)
     }
 
     private fun toggleFlash() {

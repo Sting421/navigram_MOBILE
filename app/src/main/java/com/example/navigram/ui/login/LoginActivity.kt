@@ -187,7 +187,7 @@ class LoginActivity : AppCompatActivity() {
         return withContext(Dispatchers.IO) {
             try {
                 val baseUrl = context.getString(R.string.BaseURL) // Ensure it's accessed safely
-                val url = URL("${baseUrl}api/auth/login")
+                val url = URL("$baseUrl/api/auth/login")
 
                 (url.openConnection() as HttpURLConnection).run {
                     requestMethod = "POST"
@@ -309,7 +309,7 @@ class LoginActivity : AppCompatActivity() {
     private suspend fun registerToNetworkAsGuest(context: Context): String {
         return withContext(Dispatchers.IO) {
             val baseUrl = context.getString(R.string.BaseURL) // Retrieve base URL before the coroutine
-            val url = URL("${baseUrl}api/guest/auth/register")
+            val url = URL("$baseUrl/api/guest/auth/register")
 
             (url.openConnection() as HttpURLConnection).run {
                 requestMethod = "POST"

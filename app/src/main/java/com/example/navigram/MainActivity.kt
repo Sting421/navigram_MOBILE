@@ -8,12 +8,16 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 
 import android.content.Context
+import android.util.Log
+import androidx.lifecycle.lifecycleScope
 import com.example.navigram.ui.CameraCapture
 import com.example.navigram.ui.Dashboard
 import com.example.navigram.ui.login.LoginActivity
-import com.example.navigram.ui.ui.GalleryFragment
-import com.example.navigram.ui.ui.dashboard.DashboardFragment
+import com.example.navigram.ui.login.getToken
+import com.example.navigram.ui.home.HomeFragment
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
@@ -28,64 +32,47 @@ class MainActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-        Thread {
-            try {
-                Thread.sleep(2000)
-            } catch (e: InterruptedException) {
-                e.printStackTrace()
-            }
-            runOnUiThread {
-//                if(getToken(this@MainActivity)!= null){
-//                    startActivity(Intent(this, LogoutTest::class.java))
-//                }
-//                else
-//                    startActivity(Intent(this, LoginActivity::class.java))
-//                finish() // Close MainActivity after launching LoginRegisterAct
-//                startActivity(Intent(this, CameraCapture::class.java))
-                startActivity(Intent(this, LoginActivity::class.java))
-//                val galleryFragment = GalleryFragment()
-//
-//                supportFragmentManager.beginTransaction()
-//                    .replace(R.id.fragment_container, galleryFragment)
-//                    .commit()
-            }
+        lifecycleScope.launch {
+            delay(2000) // Wait for 2 seconds instead of using Thread.sleep()
 
-        }.start()
+//            val isValid = validateToken(this@MainActivity)
+//            val intent = if (isValid) {
+//                Intent(this@MainActivity, Dashboard::class.java)
+//            } else {
+//                Intent(this@MainActivity, LoginActivity::class.java)
+//            }
+            val intent = Intent(this@MainActivity, Dashboard::class.java)
+            startActivity(intent)
+            finish() // Close MainActivity after launching the new activity
+        }
     }
 
-    private suspend fun validateToken(context: Context): String {
+    private suspend fun validateToken(context: Context): Boolean {
+        val baseUrl = context.getString(R.string.BaseURL)
+        val url = URL("$baseUrl/api/auth/me")
+        val token = getToken(context) ?: return false
+
         return withContext(Dispatchers.IO) {
-            val baseUrl = context.getString(R.string.BaseURL) // Retrieve base URL before the coroutine
-            val url = URL("${baseUrl}/api/auth/me")
-
-            (url.openConnection() as HttpURLConnection).run {
-                requestMethod = "GET"
-                connectTimeout = 10000
-                readTimeout = 10000
-                setRequestProperty("Content-Type", "application/json")
-                doOutput = true // Enable output for POST request, even if no body is sent
-
-                try {
-                    val response = inputStream.bufferedReader().use { it.readText() }
-                    println("HTTP Response Code: $responseCode") // Debugging
-                    println("API Response: $response") // Debugging
-
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
-                        println("Auth is valid: $response") // Use Log.d for debugging in Android
-                        response
-                    } else {
-                        "Error: $responseCode - $response"
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    if(responseCode == 500)
-                        "test"
-                    else
-                        "Failed to fetch Data"
-                } finally {
-                    disconnect()
+            var connection: HttpURLConnection? = null
+            try {
+                connection = (url.openConnection() as HttpURLConnection).apply {
+                    Log.e("Running", "test")
+                    requestMethod = "GET"
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty("Authorization", "Bearer $token")
                 }
+
+                val responseCode = connection.responseCode
+                responseCode == 200
+            } catch (e: Exception) {
+                Log.e("BADvalidateToken", "Error", e)
+                false
+            } finally {
+                connection?.disconnect()
             }
         }
     }
 }
+

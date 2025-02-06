@@ -1,15 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- bottom_nav_menu.xml -->
     <item
         android:id="@+id/navigation_home"
-        android:title="Home" />
+        tools:ignore="MenuTitle"
+        android:icon="@drawable/ic_home_black_24dp"/>
+
+    <item
+        android:id="@+id/navigation_search"
+        tools:ignore="MenuTitle"
+        android:icon="@android:drawable/ic_menu_search" />
+
+
     <item
         android:id="@+id/navigation_camera"
-        android:title="Camera" />
+        tools:ignore="MenuTitle"
+        android:icon="@drawable/capture"/>
+
     <item
         android:id="@+id/navigation_gallery"
-        android:title="Gallery" />
+        android:icon="@drawable/ic_dashboard_black_24dp"
+        tools:ignore="MenuTitle" />
+
+    <item
+        android:id="@+id/navigation_profile"
+        tools:ignore="MenuTitle"
+        android:icon="@drawable/navigramlogo" />
 
 </menu>
