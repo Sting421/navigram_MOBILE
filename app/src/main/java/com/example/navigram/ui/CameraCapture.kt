@@ -76,8 +76,9 @@ class CameraCapture : AppCompatActivity() {
 
          focusIndicatorView = findViewById(R.id.focusIndicator)
 
-        setupTouchFocus()
+
         startCamera()
+        setupTouchFocus()
 
         btnCapture.setOnClickListener {
             takePhoto()
@@ -103,7 +104,7 @@ class CameraCapture : AppCompatActivity() {
                 .build()
 
             cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture)
+            camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture)
         }, ContextCompat.getMainExecutor(this))
     }
 
@@ -189,18 +190,26 @@ class CameraCapture : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("ClickableViewAccessibility")
+
     private fun setupTouchFocus() {
-        previewView.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_DOWN && ::imageCapture.isInitialized) {
-                handleFocus(event.x, event.y)
+        previewView.setOnTouchListener { view, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    if (::imageCapture.isInitialized) {
+                        handleFocus(event.x, event.y)
+                    }
+                    // Required for accessibility compliance
+                    view.performClick()
+                    true
+                }
+                else -> false
             }
-            true
         }
     }
 
     private fun handleFocus(touchX: Float, touchY: Float) {
-        camera?.let {
+        val localCamera = camera
+        if (localCamera != null) {
             val factory = previewView.meteringPointFactory
             val point = factory.createPoint(touchX, touchY)
 
@@ -208,13 +217,13 @@ class CameraCapture : AppCompatActivity() {
                 .setAutoCancelDuration(2, TimeUnit.SECONDS)
                 .build()
 
-            // Access through Camera instance
-            it.cameraControl.startFocusAndMetering(focusAction)
+            localCamera.cameraControl.startFocusAndMetering(focusAction)
                 .addListener({
                     runOnUiThread { showFocusIndicator(touchX, touchY) }
                 }, ContextCompat.getMainExecutor(this))
-        } ?: run {
+        } else {
             Log.e("CameraFocus", "Camera not initialized")
+            Toast.makeText(this, "Camera focus unavailable", Toast.LENGTH_SHORT).show()
         }
     }
 

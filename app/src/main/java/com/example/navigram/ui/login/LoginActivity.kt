@@ -34,12 +34,20 @@ import java.net.MalformedURLException
 import java.net.SocketTimeoutException
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import io.github.cdimascio.dotenv.dotenv
 
 data class LoginResponse(
     val token: String,
     val username:String,
     val status: Int
 )
+// Load environment variables
+/*
+val dotenv = dotenv()  // This will load the environment variables from the .env file
+val baseUrl = dotenv["BASE_URL"]  // Retrieve the BASE_URL environment variable
+
+*/
+
 
 class LoginActivity : AppCompatActivity() {
     private val _text = MutableLiveData<String>()

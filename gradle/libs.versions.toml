@@ -27,6 +27,14 @@ cameraLifecycle = "1.4.1"
 cameraView = "1.4.1"
 playServicesLocation = "21.3.0"
 
+recyclerview = "1.4.0"
+glide = "4.16.0"
+viewpager2 = "1.1.0"
+fragmentKtx = "1.8.5"
+
+memtrack = "1.0.0"
+
+
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -54,9 +62,18 @@ camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = 
 camera-view = { module = "androidx.camera:camera-view", version.ref = "cameraView" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 
+androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
+androidx-viewpager2 = { group = "androidx.viewpager2", name = "viewpager2", version.ref = "viewpager2" }
+glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
+glide-compiler = { group = "com.github.bumptech.glide", name = "compiler", version.ref = "glide" }
+androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragmentKtx" }
 
+# dotenv library
+dotenv = { module = "io.github.cdimascio:dotenv-kotlin", version = "6.4.1" }
+
+# memtrack library (added)
+memtrack = { module = "com.example:memtrack", version.ref = "memtrack" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-

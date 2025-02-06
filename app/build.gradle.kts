@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    id("kotlin-kapt")  // Add this for Glide
 }
 
 android {
@@ -65,7 +66,16 @@ dependencies {
     // Token storage
     implementation(libs.security.crypto)
     implementation(libs.androidx.annotation)
+
+    // Location services
     implementation(libs.play.services.location)
+
+    // New dependencies for Gallery
+    implementation(libs.androidx.recyclerview)
+    implementation(libs.androidx.viewpager2)
+    implementation(libs.glide)
+    kapt(libs.glide.compiler)
+    implementation(libs.androidx.fragment.ktx)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -77,5 +87,13 @@ dependencies {
     implementation(libs.camera.camera2)
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.view)
+    //env
+    implementation(libs.dotenv)
+//    implementation(libs.memtrack)
+
 
 }
+
+
+
+
