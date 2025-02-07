@@ -31,7 +31,13 @@
 
     <fragment
         android:id="@+id/navigation_gallery"
-        android:name="com.example.navigram.GalleryFragment"
+        android:name="com.example.navigram.ui.Gallery.GalleryFragment"
         android:label="Gallery"
         tools:layout="@layout/fragment_gallery" />
+
+    <fragment
+        android:id="@+id/navigation_profile"
+        android:name="com.example.navigram.ui.Profile.ProfileFragment"
+        android:label="Profile"
+        tools:layout="@layout/activity_gallery" />
 </navigation>

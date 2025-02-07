@@ -42,6 +42,10 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        compose = true 
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = libs.versions.compose.compiler.version.get()
     }
 }
 
@@ -91,9 +95,11 @@ dependencies {
     implementation(libs.dotenv)
 //    implementation(libs.memtrack)
 
+    implementation (libs.androidx.compose.ui)
+    implementation (libs.androidx.compose.material)
+    implementation (libs.androidx.compose.ui.tooling.preview)
+    debugImplementation (libs.androidx.compose.ui.tooling)
+    implementation (libs.androidx.lifecycle.runtime.compose)
+    implementation (libs.androidx.activity.compose)
 
 }
-
-
-
-

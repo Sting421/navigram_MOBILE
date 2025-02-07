@@ -1,7 +1,6 @@
-package com.example.navigram
+package com.example.navigram.ui.Gallery
 
 import android.os.Environment
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel

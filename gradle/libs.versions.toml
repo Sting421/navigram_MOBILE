@@ -1,6 +1,6 @@
 [versions]
 agp = "8.8.0"
-kotlin = "1.9.24"
+kotlin = "1.9.22"
 coreKtx = "1.15.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -17,7 +17,7 @@ navigationUiKtx = "2.8.6"
 
 retrofit = "2.9.0"
 retrofitGson = "2.9.0"  # Added version for retrofit-gson
-coroutines = "1.7.3"  # Updated to latest stable version
+coroutines = "1.8.0"  # Updated to latest stable version
 securityCrypto = "1.1.0-alpha06"
 
 # Added CameraX dependencies
@@ -31,6 +31,9 @@ recyclerview = "1.4.0"
 glide = "4.16.0"
 viewpager2 = "1.1.0"
 fragmentKtx = "1.8.5"
+
+compose_version = "1.7.7"
+compose_compiler_version = "1.5.10"
 
 memtrack = "1.0.0"
 
@@ -73,6 +76,16 @@ dotenv = { module = "io.github.cdimascio:dotenv-kotlin", version = "6.4.1" }
 
 # memtrack library (added)
 memtrack = { module = "com.example:memtrack", version.ref = "memtrack" }
+
+# Compose libraries
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "compose_version" }
+androidx-compose-material = { group = "androidx.compose.material", name = "material", version.ref = "compose_version" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview", version.ref = "compose_version" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "compose_version" }
+androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "compose_version" }
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version = "2.8.7" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version = "1.10.0" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

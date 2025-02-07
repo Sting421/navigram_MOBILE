@@ -9,7 +9,7 @@ import androidx.navigation.NavOptions
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupWithNavController
-import com.example.navigram.GalleryViewModel
+import com.example.navigram.ui.Gallery.GalleryViewModel
 import com.example.navigram.R
 import com.example.navigram.databinding.ActivityDashboardBinding
 
@@ -77,6 +77,21 @@ class Dashboard : AppCompatActivity() {
                             NavOptions.Builder()
                                 .setLaunchSingleTop(true)
                                 .setPopUpTo(R.id.navigation_home, false)
+                                .build()
+                        )
+                    }
+                    true
+                }
+
+                R.id.navigation_profile -> {
+                    // Navigate to Home (reuse existing instance)
+                    if (currentDestination != R.id.navigation_profile) {
+                        navController.navigate(
+                            R.id.navigation_profile,
+                            null,
+                            NavOptions.Builder()
+                                .setLaunchSingleTop(true)
+                                .setPopUpTo(R.id.navigation_profile, false)
                                 .build()
                         )
                     }
