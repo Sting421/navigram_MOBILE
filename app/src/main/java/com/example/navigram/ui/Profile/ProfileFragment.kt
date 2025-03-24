@@ -11,6 +11,7 @@ import androidx.core.view.WindowCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
+import androidx.navigation.fragment.findNavController
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
@@ -134,7 +135,12 @@ class ProfileFragment : Fragment() {
             }
         }
 
-        // Optional: Set up edit profile button click listener
+        // Set up create memory button click listener
+        view.findViewById<View>(R.id.create_memory_button)?.setOnClickListener {
+            findNavController().navigate(R.id.action_navigation_profile_to_memory_creation)
+        }
+
+        // Set up edit profile button click listener
         editProfileButton.setOnClickListener {
             // TODO: Implement edit profile functionality
         }

@@ -73,6 +73,7 @@ dependencies {
 
     // Location services
     implementation(libs.play.services.location)
+    implementation(libs.play.services.maps)
 
     // New dependencies for Gallery
     implementation(libs.androidx.recyclerview)

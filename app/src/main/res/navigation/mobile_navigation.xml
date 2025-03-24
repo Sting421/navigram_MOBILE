@@ -39,5 +39,19 @@
         android:id="@+id/navigation_profile"
         android:name="com.example.navigram.ui.Profile.ProfileFragment"
         android:label="Profile"
-        tools:layout="@layout/activity_gallery" />
+        tools:layout="@layout/activity_gallery">
+        <action
+            android:id="@+id/action_navigation_profile_to_memory_creation"
+            app:destination="@id/navigation_memory_creation"
+            app:enterAnim="@anim/nav_default_enter_anim"
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+            app:popExitAnim="@anim/nav_default_pop_exit_anim" />
+    </fragment>
+
+    <activity
+        android:id="@+id/navigation_memory_creation"
+        android:name="com.example.navigram.ui.MemoryCreationActivity"
+        android:label="Create Memory"
+        tools:layout="@layout/activity_memory_creation" />
 </navigation>
