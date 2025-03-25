@@ -16,6 +16,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.content.Intent
 import android.provider.MediaStore
+import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.material.textfield.TextInputEditText
 import com.bumptech.glide.Glide
@@ -161,12 +162,14 @@ class MemoryCreationActivity : AppCompatActivity() {
         
         // Set up media upload button
         uploadButton.setOnClickListener {
-            when (mediaTypeSpinner.selectedItem.toString().toLowerCase()) {
-                "photo" -> getContent.launch("image/*")
+            when (mediaTypeSpinner.selectedItem.toString().lowercase()) {
+                "photo" -> showImagePicker()
                 "video" -> getContent.launch("video/*")
                 "audio" -> getContent.launch("audio/*")
             }
         }
+        
+
         
         // Set up submit button
         submitButton.setOnClickListener {
@@ -175,7 +178,20 @@ class MemoryCreationActivity : AppCompatActivity() {
             }
         }
     }
-    
+    private fun showImagePicker() {
+        val imagePickerDialog = ImagePickerDialog().apply {
+            setOnImageSelectedListener { uri ->
+                viewModel.setMediaUri(uri)
+                Glide.with(this@MemoryCreationActivity)
+                    .load(uri)
+                    .centerCrop()
+                    .into(previewImage)
+                previewImage.visibility = View.VISIBLE
+            }
+        }
+        imagePickerDialog.show(supportFragmentManager, "imagePicker")
+    }
+
     private fun validateForm(): Boolean {
         val state = viewModel.state.value ?: return false
         

@@ -35,13 +35,13 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             delay(2000) // Wait for 2 seconds instead of using Thread.sleep()
 
-//            val isValid = validateToken(this@MainActivity)
-//            val intent = if (isValid) {
-//                Intent(this@MainActivity, Dashboard::class.java)
-//            } else {
-//                Intent(this@MainActivity, LoginActivity::class.java)
-//            }
-            val intent = Intent(this@MainActivity, Dashboard::class.java)
+            val isValid = validateToken(this@MainActivity)
+            val intent = if (isValid) {
+                Intent(this@MainActivity, Dashboard::class.java)
+            } else {
+                Intent(this@MainActivity, LoginActivity::class.java)
+            }
+//            val intent = Intent(this@MainActivity, Dashboard::class.java)
             startActivity(intent)
             finish() // Close MainActivity after launching the new activity
         }
