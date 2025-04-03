@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("kotlin-kapt")  // Add this for Glide
+    alias(libs.plugins.kotlin.compose)  // Compose Compiler
 }
 
 android {
@@ -103,4 +104,7 @@ dependencies {
     implementation (libs.androidx.lifecycle.runtime.compose)
     implementation (libs.androidx.activity.compose)
 
+    // OpenStreetMap
+    implementation(libs.osmdroid.android)
+    implementation("androidx.preference:preference-ktx:1.2.1")
 }

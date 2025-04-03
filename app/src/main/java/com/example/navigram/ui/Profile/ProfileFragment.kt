@@ -4,9 +4,12 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.app.Dialog
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
+import com.google.android.material.textfield.TextInputEditText
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -63,7 +66,9 @@ class GalleryAdapter(private var imageItems: List<ImageItem>) :
 }
 
 class ProfileFragment : Fragment() {
-    private val viewModel: ProfileViewModel by viewModels()
+    private val viewModel: ProfileViewModel by viewModels {
+        ProfileViewModelFactory(requireContext())
+    }
 
     // UI Elements
     private lateinit var profileImage: ImageView
@@ -112,16 +117,27 @@ class ProfileFragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     viewModel.userData.collect { userData ->
-                        profileUsername.text = userData.username
-                        followersCount.text = userData.followerCount.toString()
-                        followingCount.text = userData.followingCount.toString()
+                        userData?.let { user ->
+                            profileUsername.text = "@${user.username}"
+                            val displayName = user.name ?: user.username
+                            view.findViewById<TextView>(R.id.profile_name).text = displayName
+                            
+                            // Set email in bio
+                            view.findViewById<TextView>(R.id.profile_bio).text = user.email
 
-                        // Load profile image if available
-                        userData.profileImageUrl?.let { url ->
-                            Glide.with(requireContext())
-                                .load(url)
-                                .centerCrop()
-                                .into(profileImage)
+                            // Hide follower stats for now as they're not part of the API
+                            followersCount.text = "0"
+                            followingCount.text = "0"
+
+                            // Load profile image if available
+                            user.profilePicture?.let { url ->
+                                Glide.with(requireContext())
+                                    .load(url)
+                                    .centerCrop()
+                                    .placeholder(R.drawable.navigramlogo)
+                                    .error(R.drawable.navigramlogo)
+                                    .into(profileImage)
+                            }
                         }
                     }
                 }
@@ -142,7 +158,26 @@ class ProfileFragment : Fragment() {
 
         // Set up edit profile button click listener
         editProfileButton.setOnClickListener {
-            // TODO: Implement edit profile functionality
+            showEditProfileDialog()
+        }
+
+        // Observe update status
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.updateStatus.collect { status ->
+                    when (status) {
+                        is ProfileViewModel.UpdateStatus.Success -> {
+                            Toast.makeText(context, "Profile updated successfully", Toast.LENGTH_SHORT).show()
+                            viewModel.clearUpdateStatus()
+                        }
+                        is ProfileViewModel.UpdateStatus.Error -> {
+                            Toast.makeText(context, status.message, Toast.LENGTH_LONG).show()
+                            viewModel.clearUpdateStatus()
+                        }
+                        null -> {} // Do nothing
+                    }
+                }
+            }
         }
 
         // Optional: Implement pagination or load more functionality
@@ -158,6 +193,49 @@ class ProfileFragment : Fragment() {
                 }
             }
         })
+    }
+
+    private fun showEditProfileDialog() {
+        val dialog = Dialog(requireContext())
+        dialog.setContentView(R.layout.dialog_edit_profile)
+
+        // Initialize dialog views
+        val nameInput = dialog.findViewById<TextInputEditText>(R.id.edit_name)
+        val usernameInput = dialog.findViewById<TextInputEditText>(R.id.edit_username)
+        val emailInput = dialog.findViewById<TextInputEditText>(R.id.edit_email)
+        val phoneInput = dialog.findViewById<TextInputEditText>(R.id.edit_phone)
+
+        // Pre-fill current user data
+        viewModel.userData.value?.let { user ->
+            nameInput.setText(user.name)
+            usernameInput.setText(user.username)
+            emailInput.setText(user.email)
+            phoneInput.setText(user.phoneNumber)
+        }
+
+        // Set up dialog buttons
+        dialog.findViewById<Button>(R.id.btn_cancel).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.findViewById<Button>(R.id.btn_save).setOnClickListener {
+            viewModel.userData.value?.let { currentUser ->
+                val updatedUser = UserData(
+                    username = usernameInput.text.toString(),
+                    email = emailInput.text.toString(),
+                    name = nameInput.text.toString(),
+                    profilePicture = currentUser.profilePicture,
+                    phoneNumber = phoneInput.text.toString(),
+                    role = currentUser.role,
+                    id = currentUser.id,
+                    socialLogin = currentUser.socialLogin
+                )
+                viewModel.updateUserProfile(updatedUser)
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
     }
 
     companion object {

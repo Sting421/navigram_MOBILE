@@ -17,13 +17,14 @@ import androidx.core.content.ContextCompat
 import android.content.Intent
 import android.provider.MediaStore
 import android.view.View
+import android.view.MotionEvent
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.material.textfield.TextInputEditText
 import com.bumptech.glide.Glide
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
+import org.osmdroid.views.MapView
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.config.Configuration
+import org.osmdroid.views.overlay.Marker
 
 class MemoryCreationActivity : AppCompatActivity() {
     
@@ -33,7 +34,8 @@ class MemoryCreationActivity : AppCompatActivity() {
     private lateinit var uploadButton: Button
     private lateinit var submitButton: Button
     private lateinit var previewImage: ImageView
-    private var googleMap: GoogleMap? = null
+    private lateinit var mapView: MapView
+    private var currentMarker: Marker? = null
     
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -67,30 +69,58 @@ class MemoryCreationActivity : AppCompatActivity() {
     }
 
     private fun initializeMap() {
-        val mapFragment = supportFragmentManager
-            .findFragmentById(R.id.mapContainer) as? SupportMapFragment
+        // Initialize OSMDroid configuration
+        Configuration.getInstance().userAgentValue = packageName
+
+        mapView = findViewById(R.id.mapView)
+        mapView.setMultiTouchControls(true)
         
-        mapFragment?.getMapAsync { map ->
-            googleMap = map
-            
-            // Enable location if permission is granted
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                map.isMyLocationEnabled = true
-            }
-            
-            map.setOnMapClickListener { latLng ->
-                // Clear previous markers
-                map.clear()
-                // Add new marker
-                map.addMarker(MarkerOptions().position(latLng))
+        val mapController = mapView.controller
+        mapController.setZoom(6.0) // More zoomed out to show larger area
+        
+        // Set initial position to Philippines (approximate center)
+        val startPoint = GeoPoint(13.20, 125.85)
+        mapController.setCenter(startPoint)
+
+        // Set up map click listener
+        mapView.overlays.add(object : org.osmdroid.views.overlay.Overlay(this) {
+            override fun onSingleTapConfirmed(e: MotionEvent, mapView: MapView): Boolean {
+                val projection = mapView.projection
+                val point = projection.fromPixels(e.x.toInt(), e.y.toInt())
+                val geoPoint = GeoPoint(point.latitude, point.longitude)
+                
+                // Remove previous marker
+                currentMarker?.let { mapView.overlays.remove(it) }
+                
+                // Add new marker with custom icon
+                val marker = Marker(mapView).apply {
+                    position = geoPoint
+                    // Create smaller marker icon
+                    val drawable = resources.getDrawable(R.drawable.navigramlogo, theme)
+                    drawable.setBounds(0, 0, 48, 48) // Fixed size in pixels for marker
+                    icon = drawable
+                    setAnchor(0.5f, 1.0f) // Center horizontally, bottom aligned
+                }
+                currentMarker = marker
+                mapView.overlays.add(marker)
+                
                 // Update ViewModel
-                viewModel.setLocation(latLng.latitude, latLng.longitude)
+                viewModel.setLocation(geoPoint.latitude, geoPoint.longitude)
+                
+                mapView.invalidate()
+                return true
             }
-        }
+        })
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mapView.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        mapView.onPause()
     }
     
     private fun checkLocationPermission() {
@@ -127,6 +157,13 @@ class MemoryCreationActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Initialize OSMDroid configuration before setting content view
+        Configuration.getInstance().apply {
+            userAgentValue = packageName
+            load(this@MemoryCreationActivity, androidx.preference.PreferenceManager.getDefaultSharedPreferences(this@MemoryCreationActivity))
+        }
+        
         setContentView(R.layout.activity_memory_creation)
         
         viewModel = ViewModelProvider(this)[MemoryCreationViewModel::class.java]

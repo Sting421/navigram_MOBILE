@@ -1,6 +1,7 @@
 [versions]
+osmdroid = "6.1.18"
 agp = "8.8.2"
-kotlin = "1.9.22"
+kotlin = "2.1.20"
 coreKtx = "1.15.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -21,10 +22,10 @@ coroutines = "1.8.0"  # Updated to latest stable version
 securityCrypto = "1.1.0-alpha06"
 
 # Added CameraX dependencies
-cameraCore = "1.4.1"
-cameraCamera2 = "1.4.1"
-cameraLifecycle = "1.4.1"
-cameraView = "1.4.1"
+cameraCore = "1.4.2"
+cameraCamera2 = "1.4.2"
+cameraLifecycle = "1.4.2"
+cameraView = "1.4.2"
 playServicesLocation = "21.3.0"
 playServicesMaps = "19.1.0"
 
@@ -79,6 +80,9 @@ dotenv = { module = "io.github.cdimascio:dotenv-kotlin", version = "6.4.1" }
 # memtrack library (added)
 memtrack = { module = "com.example:memtrack", version.ref = "memtrack" }
 
+# OpenStreetMap
+osmdroid-android = { module = "org.osmdroid:osmdroid-android", version.ref = "osmdroid" }
+
 # Compose libraries
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "compose_version" }
 androidx-compose-material = { group = "androidx.compose.material", name = "material", version.ref = "compose_version" }
@@ -92,3 +96,4 @@ androidx-activity-compose = { group = "androidx.activity", name = "activity-comp
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
