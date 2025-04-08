@@ -5,6 +5,7 @@ import android.app.Dialog
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -19,29 +20,28 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.navigram.R
+import com.example.navigram.data.CloudinaryUploader
 import com.example.navigram.ui.Gallery.GalleryViewModel
 import com.example.navigram.ui.Gallery.ImageItem
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ImagePickerDialog : DialogFragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var progressBar: ProgressBar
     private lateinit var adapter: ImageAdapter
     private lateinit var viewModel: GalleryViewModel
-    private var onImageSelected: ((Uri) -> Unit)? = null
+    private var onImageSelected: ((String) -> Unit)? = null
 
-    fun setOnImageSelectedListener(listener: (Uri) -> Unit) {
+    fun setOnImageSelectedListener(listener: (String) -> Unit) {
         onImageSelected = listener
     }
 
-    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        return MaterialAlertDialogBuilder(requireContext())
-            .setView(R.layout.dialog_image_picker)
-            .create()
-    }
-
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return dialog?.window?.decorView
+        return inflater.inflate(R.layout.dialog_image_picker, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -58,8 +58,23 @@ class ImagePickerDialog : DialogFragment() {
 
     private fun setupRecyclerView() {
         adapter = ImageAdapter { imageItem ->
-            onImageSelected?.invoke(Uri.fromFile(imageItem.file))
-            dismiss()
+            val imageUri = Uri.fromFile(imageItem.file)
+            progressBar.visibility = View.VISIBLE
+            
+            CoroutineScope(Dispatchers.Main).launch {
+                try {
+                    val cloudinaryUrl = withContext(Dispatchers.IO) {
+                        CloudinaryUploader.uploadImage(requireContext(), imageUri)
+                    }
+                    onImageSelected?.invoke(cloudinaryUrl)
+                    dismiss()
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Failed to upload image: ${e.message}", Toast.LENGTH_LONG).show()
+                        progressBar.visibility = View.GONE
+                    }
+                }
+            }
         }
         recyclerView.layoutManager = GridLayoutManager(requireContext(), 3)
         recyclerView.adapter = adapter

@@ -3,6 +3,7 @@ package com.example.navigram.data.api
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Body
@@ -15,6 +16,27 @@ class AuthInterceptor(private val token: String) : Interceptor {
             .build()
     )
 }
+
+data class CreateMemoryRequest(
+    val latitude: Double,
+    val longitude: Double,
+    val mediaUrl: String,
+    val mediaType: String,
+    val description: String,
+    val visibility: String
+)
+
+data class CreateMemoryResponse(
+    val id: String,
+    val latitude: Double,
+    val longitude: Double,
+    val mediaUrl: String,
+    val mediaType: String,
+    val description: String,
+    val visibility: String,
+    val createdAt: String,
+    val userId: String
+)
 
 data class UpdateUserRequest(
     val profilePicture: String?,
@@ -38,6 +60,9 @@ data class UserResponse(
 )
 
 interface ApiService {
+    @POST("api/memories")
+    suspend fun createMemory(@Body request: CreateMemoryRequest): Response<CreateMemoryResponse>
+
     @GET("api/auth/me")
     suspend fun getUserProfile(): Response<UserResponse>
 

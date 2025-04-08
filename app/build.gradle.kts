@@ -96,6 +96,9 @@ dependencies {
     //env
     implementation(libs.dotenv)
 //    implementation(libs.memtrack)
+    
+    // Cloudinary
+    implementation(libs.cloudinary.android)
 
     implementation (libs.androidx.compose.ui)
     implementation (libs.androidx.compose.material)
@@ -106,5 +109,5 @@ dependencies {
 
     // OpenStreetMap
     implementation(libs.osmdroid.android)
-    implementation("androidx.preference:preference-ktx:1.2.1")
+    implementation(libs.androidx.preference.ktx)
 }

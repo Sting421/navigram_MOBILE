@@ -16,6 +16,15 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.content.Intent
 import android.provider.MediaStore
+import android.content.Context
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKeys
+import com.example.navigram.data.api.ApiService
+import com.example.navigram.data.api.AuthInterceptor
+import okhttp3.OkHttpClient
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import android.util.Log
 import android.view.View
 import android.view.MotionEvent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -107,6 +116,9 @@ class MemoryCreationActivity : AppCompatActivity() {
                 // Update ViewModel
                 viewModel.setLocation(geoPoint.latitude, geoPoint.longitude)
                 
+                // Log the coordinates
+                Log.d("MemoryCreation", "Selected location: ${geoPoint.latitude}, ${geoPoint.longitude}")
+                
                 mapView.invalidate()
                 return true
             }
@@ -166,7 +178,27 @@ class MemoryCreationActivity : AppCompatActivity() {
         
         setContentView(R.layout.activity_memory_creation)
         
-        viewModel = ViewModelProvider(this)[MemoryCreationViewModel::class.java]
+        // Initialize Retrofit and ApiService
+        val token = getStoredToken()
+        if (token == null) {
+            Toast.makeText(this, "Please login first", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor(AuthInterceptor(token))
+            .build()
+
+        val retrofit = Retrofit.Builder()
+            .baseUrl("http://192.168.196.8:8080") // Using Android emulator localhost
+            .addConverterFactory(GsonConverterFactory.create())
+            .client(okHttpClient)
+            .build()
+
+        val apiService = retrofit.create(ApiService::class.java)
+        val factory = MemoryCreationViewModelFactory(apiService)
+        viewModel = ViewModelProvider(this, factory)[MemoryCreationViewModel::class.java]
         
         // Initialize views and check location permission
         mediaTypeSpinner = findViewById(R.id.mediaTypeSpinner)
@@ -211,16 +243,22 @@ class MemoryCreationActivity : AppCompatActivity() {
         // Set up submit button
         submitButton.setOnClickListener {
             if (validateForm()) {
-                uploadMemory()
+            // Ensure description is not empty after trim
+            val trimmedDescription = descriptionInput.text.toString().trim()
+            if (trimmedDescription.isEmpty()) {
+                Toast.makeText(this, "Please add a description", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            uploadMemory(trimmedDescription)
             }
         }
     }
     private fun showImagePicker() {
         val imagePickerDialog = ImagePickerDialog().apply {
-            setOnImageSelectedListener { uri ->
-                viewModel.setMediaUri(uri)
+            setOnImageSelectedListener { url ->
+                viewModel.setMediaUrl(url)
                 Glide.with(this@MemoryCreationActivity)
-                    .load(uri)
+                    .load(url)
                     .centerCrop()
                     .into(previewImage)
                 previewImage.visibility = View.VISIBLE
@@ -232,7 +270,7 @@ class MemoryCreationActivity : AppCompatActivity() {
     private fun validateForm(): Boolean {
         val state = viewModel.state.value ?: return false
         
-        if (state.selectedMediaUri == null) {
+        if (state.selectedMediaUri == null && state.selectedMediaUrl == null) {
             Toast.makeText(this, "Please select a media file", Toast.LENGTH_SHORT).show()
             return false
         }
@@ -249,8 +287,21 @@ class MemoryCreationActivity : AppCompatActivity() {
         
         return true
     }
-    
-    private fun uploadMemory() {
-        viewModel.uploadMemory(descriptionInput.text.toString())
+
+    private fun getStoredToken(): String? {
+        val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+        val sharedPreferences = EncryptedSharedPreferences.create(
+            "secure_prefs",
+            masterKeyAlias,
+            this,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+        return sharedPreferences.getString("auth_token", null)
+    }
+
+    private fun uploadMemory(description: String) {
+        viewModel.uploadMemory(description)
+        Log.d("MemoryCreation", "Uploading memory with description: ${descriptionInput.text}")
     }
 }

@@ -16,6 +16,7 @@ lifecycleViewmodelKtx = "2.8.7"
 navigationFragmentKtx = "2.8.9"
 navigationUiKtx = "2.8.9"
 
+preferenceKtx = "1.2.1"
 retrofit = "2.9.0"
 retrofitGson = "2.9.0"  # Added version for retrofit-gson
 coroutines = "1.8.0"  # Updated to latest stable version
@@ -38,10 +39,12 @@ compose_version = "1.7.8"
 compose_compiler_version = "1.5.10"
 
 memtrack = "1.0.0"
+cloudinary = "2.3.1"
 
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-preference-ktx = { module = "androidx.preference:preference-ktx", version.ref = "preferenceKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -82,6 +85,9 @@ memtrack = { module = "com.example:memtrack", version.ref = "memtrack" }
 
 # OpenStreetMap
 osmdroid-android = { module = "org.osmdroid:osmdroid-android", version.ref = "osmdroid" }
+
+# Cloudinary
+cloudinary-android = { module = "com.cloudinary:cloudinary-android", version.ref = "cloudinary" }
 
 # Compose libraries
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "compose_version" }

@@ -34,6 +34,7 @@ import java.net.MalformedURLException
 import java.net.SocketTimeoutException
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import com.example.navigram.ui.Dashboard
 import io.github.cdimascio.dotenv.dotenv
 
 data class LoginResponse(
@@ -127,7 +128,7 @@ class LoginActivity : AppCompatActivity() {
                     try {
                         if (result.startsWith("{")) {
                             val post = Gson().fromJson(result, SignUpResponse::class.java)
-                            val intent = Intent(this@LoginActivity, CameraCapture::class.java)
+                            val intent = Intent(this@LoginActivity, Dashboard::class.java)
                             saveToken(this@LoginActivity,post.token,post.username)
                             startActivity(intent)
                         } else {
@@ -154,7 +155,7 @@ class LoginActivity : AppCompatActivity() {
                                 //token storage
                                 saveToken(context,post.token,post.username)
                                 Toast.makeText(this@LoginActivity, "Hello ${post.username}, Welcome to Navigram!", Toast.LENGTH_LONG).show()
-                                val intent = Intent(this@LoginActivity, CameraCapture::class.java)
+                                val intent = Intent(this@LoginActivity, Dashboard::class.java)
                                 startActivity(intent)
                                 finish()
 
