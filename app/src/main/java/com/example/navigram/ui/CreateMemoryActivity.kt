@@ -140,7 +140,7 @@ class CreateMemoryActivity : AppCompatActivity() {
             .build()
 
         val retrofit = Retrofit.Builder()
-            .baseUrl("http://192.168.196.8:8080") // Using Android emulator localhost
+            .baseUrl(this.getString(R.string.BaseURL))// Using Android emulator localhost
             .addConverterFactory(GsonConverterFactory.create())
             .client(okHttpClient)
             .build()

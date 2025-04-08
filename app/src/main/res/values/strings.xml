@@ -20,10 +20,11 @@
     <string name="title_dashboard">Dashboard</string>
     <string name="title_notifications">Notifications</string>
     <string name="title_map">Map</string>
+    <string name="title_search">Search</string>
     <string name="loadingImage">false</string>>
 
 
-    <string name="BaseURL">http://192.168.196.8:8080</string>
+    <string name="BaseURL">https://echomap-api.aetherrflare.org</string>
     <string name="capture">Capture</string>s
     <string name="switch_camera">Front camera</string>
     <!--    User Data-->

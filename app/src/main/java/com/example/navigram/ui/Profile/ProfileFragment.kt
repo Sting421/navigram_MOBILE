@@ -5,6 +5,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.app.Dialog
+import android.content.Context
+
 import android.util.Log
 import android.widget.Button
 import android.widget.ImageView
@@ -44,6 +46,7 @@ class ProfileFragment : Fragment() {
     private lateinit var followersCount: TextView
     private lateinit var followingCount: TextView
     private lateinit var editProfileButton: Button
+    private lateinit var logoutButton: Button
     private lateinit var postsRecyclerView: RecyclerView
 
     // Memory Adapter
@@ -66,6 +69,7 @@ class ProfileFragment : Fragment() {
         followersCount = view.findViewById(R.id.profile_followers_count)
         followingCount = view.findViewById(R.id.profile_following_count)
         editProfileButton = view.findViewById(R.id.edit_profile_button)
+        logoutButton = view.findViewById(R.id.logout_button)
         postsRecyclerView = view.findViewById(R.id.profile_posts_recycler_view)
 
         // Setup RecyclerView with MemoryAdapter using fully qualified type
@@ -139,9 +143,21 @@ class ProfileFragment : Fragment() {
             findNavController().navigate(R.id.action_navigation_profile_to_memory_creation)
         }
 
-        // Set up edit profile button click listener
+        // Set up button click listeners
         editProfileButton.setOnClickListener {
             showEditProfileDialog()
+        }
+
+        logoutButton.setOnClickListener {
+            // Clear secure preferences
+            requireContext().getSharedPreferences("secure_prefs", Context.MODE_PRIVATE)
+                .edit()
+                .clear()
+                .apply()
+
+            // Navigate to login screen
+            findNavController().navigate(R.id.action_navigation_profile_to_loginActivity)
+            requireActivity().finish() // Close the current activity to prevent going back
         }
 
         // Observe update status

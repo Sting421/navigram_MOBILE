@@ -11,17 +11,11 @@
         android:label="@string/title_home"
         tools:layout="@layout/fragment_home" />
 
-    <fragment
-        android:id="@+id/navigation_dashboard"
-        android:name="com.example.navigram.ui.ui.dashboard.DashboardFragment"
-        android:label="@string/title_dashboard"
-        tools:layout="@layout/fragment_dashboard" />
-
-    <fragment
-        android:id="@+id/navigation_notifications"
-        android:name="com.example.navigram.ui.ui.notifications.NotificationsFragment"
-        android:label="@string/title_notifications"
-        tools:layout="@layout/fragment_notifications" />
+    <activity
+        android:id="@+id/navigation_camera"
+        android:name="com.example.navigram.ui.CameraCapture"
+        android:label="Camera"
+        tools:layout="@layout/activity_camera_capture" />
 
     <fragment
         android:id="@+id/navigation_map"
@@ -30,22 +24,16 @@
         tools:layout="@layout/fragment_map" />
 
     <fragment
-        android:id="@+id/navigation_camera"
-        android:name="com.example.navigram.ui.CameraCapture"
-        android:label="Camera"
-        tools:layout="@layout/activity_camera_capture" />
-
-    <fragment
-        android:id="@+id/navigation_gallery"
-        android:name="com.example.navigram.ui.Gallery.GalleryFragment"
-        android:label="Gallery"
-        tools:layout="@layout/fragment_gallery" />
+        android:id="@+id/navigation_search"
+        android:name="com.example.navigram.ui.search.SearchFragment"
+        android:label="@string/title_search"
+        tools:layout="@layout/fragment_search" />
 
     <fragment
         android:id="@+id/navigation_profile"
         android:name="com.example.navigram.ui.Profile.ProfileFragment"
         android:label="Profile"
-        tools:layout="@layout/activity_gallery">
+        tools:layout="@layout/activity_profile">
         <action
             android:id="@+id/action_navigation_profile_to_memory_creation"
             app:destination="@id/navigation_memory_creation"
@@ -53,7 +41,20 @@
             app:exitAnim="@anim/nav_default_exit_anim"
             app:popEnterAnim="@anim/nav_default_pop_enter_anim"
             app:popExitAnim="@anim/nav_default_pop_exit_anim" />
+        <action
+            android:id="@+id/action_navigation_profile_to_loginActivity"
+            app:destination="@+id/loginActivity"
+            app:enterAnim="@anim/nav_default_enter_anim"
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popUpTo="@id/mobile_navigation"
+            app:popUpToInclusive="true" />
     </fragment>
+
+    <activity
+        android:id="@+id/loginActivity"
+        android:name="com.example.navigram.ui.login.LoginActivity"
+        android:label="Login"
+        tools:layout="@layout/activity_login" />
 
     <activity
         android:id="@+id/navigation_memory_creation"

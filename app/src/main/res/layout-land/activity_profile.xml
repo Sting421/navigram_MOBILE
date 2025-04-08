@@ -178,21 +178,42 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/profile_name" />
 
-        <!-- Edit Profile Button -->
-        <Button
-            android:id="@+id/edit_profile_button"
+        <!-- Buttons Container -->
+        <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="32dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:background="@drawable/edit_text_border"
-            android:text="Edit Profile"
-            android:textAllCaps="false"
-            android:textColor="#000000"
-            android:textSize="12sp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
+            android:orientation="horizontal"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/profile_bio" />
+            app:layout_constraintTop_toBottomOf="@id/profile_bio">
+
+            <!-- Edit Profile Button -->
+            <Button
+                android:id="@+id/edit_profile_button"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:background="@drawable/edit_text_border"
+                android:text="Edit Profile"
+                android:textAllCaps="false"
+                android:textColor="#000000"
+                android:textSize="12sp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:layout_marginEnd="8dp" />
+
+            <!-- Logout Button -->
+            <Button
+                android:id="@+id/logout_button"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:background="@drawable/edit_text_border"
+                android:text="Logout"
+                android:textAllCaps="false"
+                android:textColor="#FF0000"
+                android:textSize="12sp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp" />
+        </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- View Toggle -->

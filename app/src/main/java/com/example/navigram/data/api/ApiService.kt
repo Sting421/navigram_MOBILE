@@ -7,7 +7,9 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Body
+import retrofit2.http.Query
 import retrofit2.Response
+import com.example.navigram.data.model.User
 
 class AuthInterceptor(private val token: String) : Interceptor {
     override fun intercept(chain: Interceptor.Chain) = chain.proceed(
@@ -74,4 +76,14 @@ interface ApiService {
 
     @GET("api/memories")
     suspend fun getMemories(): Response<List<CreateMemoryResponse>>
+
+    @GET("api/users/all")
+    suspend fun getAllUsers(): Response<List<UserResponse>>
+
+    // Removed the old searchUsers endpoint as filtering is now done client-side
+    // @GET("api/users/search")
+    // suspend fun searchUsers(@Query("query") query: String): Response<List<UserResponse>>
+
+    @GET("api/users/{userId}/profile")
+    suspend fun getPublicUserProfile(@Path("userId") userId: String): Response<UserResponse>
 }

@@ -2,6 +2,7 @@ package com.example.navigram.ui.map
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.location.Location
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -15,8 +16,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.navigram.R
+import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import android.app.Dialog
+import android.util.Log
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -42,7 +45,7 @@ class MapFragment : Fragment() {
     companion object {
         private const val ZOOM_LEVEL = 7.0
         private const val CLUSTER_DISTANCE_THRESHOLD = 0.05 // Base threshold in kilometers
-        private const val LOCATION_ZOOM = 15.0
+        private const val LOCATION_ZOOM = 10.0
     }
     private val LOCATION_PERMISSION_REQUEST = 1
     private val viewModel: MapViewModel by viewModels {
@@ -85,6 +88,7 @@ class MapFragment : Fragment() {
         myLocationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(context), map)
         myLocationOverlay.enableMyLocation()
         map.overlays.add(myLocationOverlay)
+
 
         // Set up my location button
         view.findViewById<FloatingActionButton>(R.id.my_location_button).setOnClickListener {
@@ -239,15 +243,33 @@ class MapFragment : Fragment() {
         }
     }
 
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+    private fun fetchLocation(callback: (Location?) -> Unit) {
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.lastLocation
+                .addOnSuccessListener { location: Location? ->
+                    callback(location)
+                }
+                .addOnFailureListener { e ->
+                    Log.e("CameraCapture", "Failed to get location: ${e.message}")
+                    callback(null)
+                }
+        } else {
+            callback(null)
+        }
+    }
+
     private fun enableLocation() {
         if (!locationPermissionGranted) return
 
         try {
-            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+            fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+            fetchLocation { location ->
                 location?.let {
                     val geoPoint = GeoPoint(location.latitude, location.longitude)
                     map.controller.animateTo(geoPoint)
+                    Log.d("MapFragment", "Current location - Latitude: ${location.latitude}, Longitude: ${location.longitude}")
                 }
             }
         } catch (e: SecurityException) {
