@@ -83,10 +83,10 @@ class MemoryCreationActivity : AppCompatActivity() {
 
         mapView = findViewById(R.id.mapView)
         mapView.setMultiTouchControls(true)
-        
+
         val mapController = mapView.controller
         mapController.setZoom(6.0) // More zoomed out to show larger area
-        
+
         // Set initial position to Philippines (approximate center)
         val startPoint = GeoPoint(13.20, 125.85)
         mapController.setCenter(startPoint)
@@ -97,10 +97,10 @@ class MemoryCreationActivity : AppCompatActivity() {
                 val projection = mapView.projection
                 val point = projection.fromPixels(e.x.toInt(), e.y.toInt())
                 val geoPoint = GeoPoint(point.latitude, point.longitude)
-                
+
                 // Remove previous marker
                 currentMarker?.let { mapView.overlays.remove(it) }
-                
+
                 // Add new marker with custom icon
                 val marker = Marker(mapView).apply {
                     position = geoPoint
@@ -112,13 +112,13 @@ class MemoryCreationActivity : AppCompatActivity() {
                 }
                 currentMarker = marker
                 mapView.overlays.add(marker)
-                
+
                 // Update ViewModel
                 viewModel.setLocation(geoPoint.latitude, geoPoint.longitude)
-                
+
                 // Log the coordinates
                 Log.d("MemoryCreation", "Selected location: ${geoPoint.latitude}, ${geoPoint.longitude}")
-                
+
                 mapView.invalidate()
                 return true
             }

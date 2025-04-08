@@ -205,10 +205,12 @@ class CreateMemoryActivity : AppCompatActivity() {
                 
                 val marker = Marker(mapView).apply {
                     position = geoPoint
-                    val drawable = resources.getDrawable(R.drawable.navigramlogo, theme)
-                    drawable.setBounds(0, 0, 48, 48)
-                    icon = drawable
-                    setAnchor(0.5f, 1.0f)
+                    val drawable = ContextCompat.getDrawable(this@CreateMemoryActivity, R.drawable.mappin2)
+                    drawable?.let {
+                        it.setBounds(0, 0, 72, 72)  // Increased size for better visibility
+                        icon = it
+                    }
+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)  // Center-bottom anchoring
                 }
                 currentMarker = marker
                 mapView.overlays.add(marker)

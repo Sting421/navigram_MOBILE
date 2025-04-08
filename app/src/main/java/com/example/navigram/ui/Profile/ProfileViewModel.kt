@@ -79,7 +79,6 @@ class ProfileViewModel(private val context: Context) : ViewModel() {
 
     init {
         loadUserProfile()
-        loadMemories()
     }
 
     private fun loadMemories() {
@@ -87,9 +86,14 @@ class ProfileViewModel(private val context: Context) : ViewModel() {
             try {
                 val response = apiService.getMemories()
                 if (response.isSuccessful) {
-                    val memoriesList = response.body() ?: emptyList()
-                    _memories.value = memoriesList
-                    _memoriesCount.value = memoriesList.size
+                    val allMemories = response.body() ?: emptyList()
+                    // Filter memories by current user's ID
+                    val currentUserId = _userData.value?.id
+                    if (currentUserId != null) {
+                        val userMemories = allMemories.filter { it.userId == currentUserId }
+                        _memories.value = userMemories
+                        _memoriesCount.value = userMemories.size
+                    }
                 } else {
                     Log.e(TAG, "Error loading memories: ${response.errorBody()?.string()}")
                 }
@@ -128,6 +132,8 @@ class ProfileViewModel(private val context: Context) : ViewModel() {
                         
                         Log.d(TAG, "Created UserData: $userData")
                         _userData.value = userData
+                        // Reload memories after user data is loaded to apply filtering
+                        loadMemories()
                     }
                 } else {
                     Log.e(TAG, "Error loading user profile: ${response.errorBody()?.string()}")
@@ -180,6 +186,8 @@ class ProfileViewModel(private val context: Context) : ViewModel() {
                         )
                         _userData.value = updatedUserData
                         _updateStatus.value = UpdateStatus.Success
+                        // Reload memories after profile update to ensure correct filtering
+                        loadMemories()
                     }
                 } else {
                     _updateStatus.value = UpdateStatus.Error("Failed to update profile: ${response.errorBody()?.string()}")

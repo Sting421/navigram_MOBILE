@@ -33,7 +33,8 @@ class Dashboard : AppCompatActivity() {
 
         val appBarConfiguration = AppBarConfiguration(
             setOf(
-                R.id.navigation_home, R.id.navigation_camera, R.id.navigation_gallery
+                R.id.navigation_home, R.id.navigation_camera, R.id.navigation_gallery,
+                R.id.navigation_map, R.id.navigation_profile
             )
         )
         
@@ -84,7 +85,7 @@ class Dashboard : AppCompatActivity() {
                 }
 
                 R.id.navigation_profile -> {
-                    // Navigate to Home (reuse existing instance)
+                    // Navigate to Profile (reuse existing instance)
                     if (currentDestination != R.id.navigation_profile) {
                         navController.navigate(
                             R.id.navigation_profile,
@@ -92,6 +93,20 @@ class Dashboard : AppCompatActivity() {
                             NavOptions.Builder()
                                 .setLaunchSingleTop(true)
                                 .setPopUpTo(R.id.navigation_profile, false)
+                                .build()
+                        )
+                    }
+                    true
+                }
+                R.id.navigation_map -> {
+                    // Navigate to Map (reuse existing instance)
+                    if (currentDestination != R.id.navigation_map) {
+                        navController.navigate(
+                            R.id.navigation_map,
+                            null,
+                            NavOptions.Builder()
+                                .setLaunchSingleTop(true)
+                                .setPopUpTo(R.id.navigation_map, false)
                                 .build()
                         )
                     }
