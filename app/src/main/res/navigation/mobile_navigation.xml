@@ -51,7 +51,7 @@
 
     <activity
         android:id="@+id/navigation_memory_creation"
-        android:name="com.example.navigram.ui.MemoryCreationActivity"
+        android:name="com.example.navigram.ui.CreateMemoryActivity"
         android:label="Create Memory"
-        tools:layout="@layout/activity_memory_creation" />
+        tools:layout="@layout/activity_create_memory" />
 </navigation>

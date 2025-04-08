@@ -71,4 +71,7 @@ interface ApiService {
         @Path("id") userId: String,
         @Body request: UpdateUserRequest
     ): Response<UserResponse>
+
+    @GET("api/memories")
+    suspend fun getMemories(): Response<List<CreateMemoryResponse>>
 }

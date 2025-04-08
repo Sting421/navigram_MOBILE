@@ -100,6 +100,9 @@ dependencies {
     // Cloudinary
     implementation(libs.cloudinary.android)
 
+    // Networking
+    implementation(libs.okhttp)
+
     implementation (libs.androidx.compose.ui)
     implementation (libs.androidx.compose.material)
     implementation (libs.androidx.compose.ui.tooling.preview)

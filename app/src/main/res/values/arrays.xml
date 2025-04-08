@@ -5,4 +5,10 @@
         <item>Video</item>
         <item>Audio</item>
     </string-array>
+
+    <string-array name="visibility_types">
+        <item>PUBLIC</item>
+        <item>FOLLOWER</item>
+        <item>PRIVATE</item>
+    </string-array>
 </resources>

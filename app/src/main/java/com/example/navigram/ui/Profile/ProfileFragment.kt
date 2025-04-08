@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.app.Dialog
+import android.util.Log
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
@@ -24,48 +25,14 @@ import com.example.navigram.R
 import com.example.navigram.ui.Profile.ProfileViewModel
 import com.example.navigram.ui.Profile.UserData
 import kotlinx.coroutines.launch
-
-// RecyclerView Adapter for Gallery Images
-class GalleryAdapter(private var imageItems: List<ImageItem>) : 
-    RecyclerView.Adapter<GalleryAdapter.ImageViewHolder>() {
-
-    class ImageViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val imageView: ImageView = view.findViewById(R.id.gallery_item_image)
-        val videoIndicator: View = view.findViewById(R.id.gallery_item_video_indicator)
-    }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ImageViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.gallery_item, parent, false)
-        return ImageViewHolder(view)
-    }
-
-    override fun onBindViewHolder(holder: ImageViewHolder, position: Int) {
-        val imageItem = imageItems[position]
-
-        // Load image using Glide
-        Glide.with(holder.imageView.context)
-            .load(imageItem.file)
-            .centerCrop()
-            .into(holder.imageView)
-
-        // Show video indicator if it's a video
-        holder.videoIndicator.visibility = when (imageItem.type) {
-            ImageItem.MediaType.VIDEO -> View.VISIBLE
-            ImageItem.MediaType.IMAGE -> View.GONE
-        }
-    }
-
-    override fun getItemCount() = imageItems.size
-
-    // Method to update the list of images
-    fun updateImages(newImageItems: List<ImageItem>) {
-        imageItems = newImageItems
-        notifyDataSetChanged()
-    }
-}
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
 
 class ProfileFragment : Fragment() {
+    private val client = OkHttpClient()
     private val viewModel: ProfileViewModel by viewModels {
         ProfileViewModelFactory(requireContext())
     }
@@ -79,8 +46,11 @@ class ProfileFragment : Fragment() {
     private lateinit var editProfileButton: Button
     private lateinit var postsRecyclerView: RecyclerView
 
-    // Gallery Adapter
-    private lateinit var galleryAdapter: GalleryAdapter
+    // Memory Adapter
+    private lateinit var memoryAdapter: MemoryAdapter
+
+    // Memory list type with fully qualified name
+    private var memories: List<com.example.navigram.data.api.CreateMemoryResponse> = emptyList()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -98,10 +68,12 @@ class ProfileFragment : Fragment() {
         editProfileButton = view.findViewById(R.id.edit_profile_button)
         postsRecyclerView = view.findViewById(R.id.profile_posts_recycler_view)
 
-        // Setup RecyclerView
-        galleryAdapter = GalleryAdapter(emptyList())
+        // Setup RecyclerView with MemoryAdapter using fully qualified type
+        memoryAdapter = MemoryAdapter(memories) { memory: com.example.navigram.data.api.CreateMemoryResponse ->
+            showMemoryDetailsDialog(memory)
+        }
         postsRecyclerView.layoutManager = GridLayoutManager(context, 3)
-        postsRecyclerView.adapter = galleryAdapter
+        postsRecyclerView.adapter = memoryAdapter
 
         return view
     }
@@ -143,9 +115,20 @@ class ProfileFragment : Fragment() {
                 }
                 
                 launch {
-                    viewModel.galleryData.collect { imageItems ->
-                        postCount.text = imageItems.size.toString()
-                        galleryAdapter.updateImages(imageItems)
+                    viewModel.memoriesCount.collect { count ->
+                        postCount.text = count.toString()
+                    }
+                }
+
+                launch {
+                    viewModel.memories.collect { memories ->
+                        memoryAdapter.updateMemories(memories)
+                    }
+                }
+
+                launch {
+                    viewModel.selectedMemory.collect { memory ->
+                        // Memory selection is handled by showMemoryDetailsDialog
                     }
                 }
             }
@@ -180,19 +163,6 @@ class ProfileFragment : Fragment() {
             }
         }
 
-        // Optional: Implement pagination or load more functionality
-        postsRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-                val layoutManager = recyclerView.layoutManager as GridLayoutManager
-                val totalItemCount = layoutManager.itemCount
-                val lastVisibleItem = layoutManager.findLastVisibleItemPosition()
-
-                if (totalItemCount <= lastVisibleItem + 3) {
-                    viewModel.loadImages(loadMore = true)
-                }
-            }
-        })
     }
 
     private fun showEditProfileDialog() {
@@ -233,6 +203,69 @@ class ProfileFragment : Fragment() {
                 viewModel.updateUserProfile(updatedUser)
                 dialog.dismiss()
             }
+        }
+
+        dialog.show()
+    }
+
+    private fun showMemoryDetailsDialog(memory: com.example.navigram.data.api.CreateMemoryResponse) {
+        val dialog = Dialog(requireContext())
+        dialog.setContentView(R.layout.dialog_memory_details)
+
+        // Initialize dialog views
+        val memoryImage = dialog.findViewById<ImageView>(R.id.memory_image)
+        val memoryDescription = dialog.findViewById<TextView>(R.id.memory_description)
+        val memoryDate = dialog.findViewById<TextView>(R.id.memory_date)
+
+        // Load memory data
+        Glide.with(requireContext())
+            .load(memory.mediaUrl)
+            .centerCrop()
+            .placeholder(R.drawable.navigramlogo)
+            .error(R.drawable.navigramlogo)
+            .into(memoryImage)
+
+        memoryDescription.text = memory.description
+        memoryDate.text = memory.createdAt
+
+        // Get location data
+        val memoryLocation = dialog.findViewById<TextView>(R.id.memory_location)
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val locationText = withContext(Dispatchers.IO) {
+                    val request = Request.Builder()
+                        .url("https://address-from-to-latitude-longitude.p.rapidapi.com/geolocationapi?lat=${memory.latitude}&lng=${memory.longitude}")
+                        .get()
+                        .addHeader("x-rapidapi-key", "fc33d176bdmsh77abb4787653b11p100a6cjsn63a64fd53e22")
+                        .addHeader("x-rapidapi-host", "address-from-to-latitude-longitude.p.rapidapi.com")
+                        .build()
+
+                    val response = client.newCall(request).execute()
+                    val responseBody = response.body?.string()
+                    Log.d(TAG, "API Response: $responseBody")
+                    val jsonResponse = JSONObject(responseBody ?: "{}")
+                    
+                    val results = jsonResponse.optJSONArray("Results")
+                    Log.d(TAG, "Results array: ${results?.toString(2)}")
+                    val address = if (results != null && results.length() > 0) {
+                        val firstResult = results.getJSONObject(0)
+                        firstResult.optString("address", "Location not available")
+                    } else {
+                        "Location not available"
+                    }
+                    "📍 $address"
+                }
+                memoryLocation.text = locationText
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching location: ${e.message}", e)
+                memoryLocation.text = "📍 Location not available"
+            }
+        }
+
+        // Set up close button
+        dialog.findViewById<Button>(R.id.close_button).setOnClickListener {
+            dialog.dismiss()
+            viewModel.clearSelectedMemory()
         }
 
         dialog.show()

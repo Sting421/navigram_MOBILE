@@ -1,4 +1,5 @@
 [versions]
+okhttp = "4.12.0"
 osmdroid = "6.1.18"
 agp = "8.8.2"
 kotlin = "2.1.20"
@@ -82,6 +83,9 @@ dotenv = { module = "io.github.cdimascio:dotenv-kotlin", version = "6.4.1" }
 
 # memtrack library (added)
 memtrack = { module = "com.example:memtrack", version.ref = "memtrack" }
+
+# Networking
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 
 # OpenStreetMap
 osmdroid-android = { module = "org.osmdroid:osmdroid-android", version.ref = "osmdroid" }

@@ -18,7 +18,7 @@ data class MemoryCreationState(
     val selectedMediaUrl: String? = null,
     val selectedLocation: MemoryLocation? = null,
     val isSuccess: Boolean = false,
-    val visibility: String = "PUBLIC",
+        val visibility: String = "PUBLIC", // Default visibility
     val mediaType: String = "IMAGE"
 )
 
@@ -45,6 +45,13 @@ class MemoryCreationViewModel(
         _state.value = _state.value?.copy(
             selectedMediaUri = null,
             selectedMediaUrl = url,
+            error = null
+        )
+    }
+
+    fun setVisibility(visibility: String) {
+        _state.value = _state.value?.copy(
+            visibility = visibility,
             error = null
         )
     }

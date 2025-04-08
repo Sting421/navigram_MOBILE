@@ -1,42 +1,23 @@
 package com.example.navigram.ui.Profile
 
 import android.content.Context
-import android.os.Environment
 import android.util.Log
 import com.example.navigram.ui.login.getToken
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.navigram.R
 import com.example.navigram.data.api.ApiService
 import com.example.navigram.data.api.AuthInterceptor
 import com.example.navigram.data.api.UpdateUserRequest
+import com.example.navigram.data.api.CreateMemoryResponse
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
-
-// Data class to represent an image or video item
-data class ImageItem(
-    val file: File,
-    val type: MediaType,
-    val lastModified: Long = file.lastModified()
-) {
-    enum class MediaType {
-        IMAGE, VIDEO
-    }
-
-    val name: String = file.name
-    val path: String = file.absolutePath
-}
 
 class ProfileViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -48,7 +29,6 @@ class ProfileViewModelFactory(private val context: Context) : ViewModelProvider.
     }
 }
 
-// Data class to represent user profile information
 data class UserData(
     val username: String,
     val email: String,
@@ -85,19 +65,46 @@ class ProfileViewModel(private val context: Context) : ViewModel() {
     private val _userData = MutableStateFlow<UserData?>(null)
     val userData: StateFlow<UserData?> = _userData.asStateFlow()
 
-    private val _galleryData = MutableStateFlow<List<ImageItem>>(emptyList())
-    val galleryData: StateFlow<List<ImageItem>> = _galleryData.asStateFlow()
+    private val _memories = MutableStateFlow<List<CreateMemoryResponse>>(emptyList())
+    val memories: StateFlow<List<CreateMemoryResponse>> = _memories.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private var currentPage = 0
-    private val itemsPerPage = 20
-    private var hasMoreItems = true
+    private val _memoriesCount = MutableStateFlow(0)
+    val memoriesCount: StateFlow<Int> = _memoriesCount.asStateFlow()
+
+    private val _selectedMemory = MutableStateFlow<CreateMemoryResponse?>(null)
+    val selectedMemory: StateFlow<CreateMemoryResponse?> = _selectedMemory.asStateFlow()
 
     init {
         loadUserProfile()
-        loadImages()
+        loadMemories()
+    }
+
+    private fun loadMemories() {
+        viewModelScope.launch {
+            try {
+                val response = apiService.getMemories()
+                if (response.isSuccessful) {
+                    val memoriesList = response.body() ?: emptyList()
+                    _memories.value = memoriesList
+                    _memoriesCount.value = memoriesList.size
+                } else {
+                    Log.e(TAG, "Error loading memories: ${response.errorBody()?.string()}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading memories", e)
+            }
+        }
+    }
+
+    fun selectMemory(memory: CreateMemoryResponse) {
+        _selectedMemory.value = memory
+    }
+
+    fun clearSelectedMemory() {
+        _selectedMemory.value = null
     }
 
     private fun loadUserProfile() {
@@ -132,64 +139,6 @@ class ProfileViewModel(private val context: Context) : ViewModel() {
         }
     }
 
-    /**
-     * Loads images from storage.
-     * @param loadMore: Whether to load additional images (pagination).
-     */
-    fun loadImages(loadMore: Boolean = false) {
-        if (!hasMoreItems && loadMore) return
-
-        if (!loadMore) {
-            currentPage = 0
-            hasMoreItems = true
-            _galleryData.value = emptyList()
-        }
-
-        _isLoading.value = true
-
-        viewModelScope.launch {
-            val images = withContext(Dispatchers.IO) {
-                getImagesFromStorage(currentPage, itemsPerPage)
-            }
-
-            if (images.isNotEmpty()) {
-                _galleryData.value = _galleryData.value + images
-            }
-
-            _isLoading.value = false
-            hasMoreItems = images.size == itemsPerPage
-            currentPage++
-        }
-    }
-
-    /**
-     * Fetches images from device storage.
-     */
-    private fun getImagesFromStorage(page: Int, pageSize: Int): List<ImageItem> {
-        val directory = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
-            "Camera"
-        )
-
-        return directory.listFiles()
-            ?.filter { file ->
-                file.isFile && file.extension.lowercase() in listOf("jpg", "jpeg", "png", "mp4", "gif", "bmp")
-            }
-            ?.sortedByDescending { it.lastModified() }
-            ?.drop(page * pageSize)
-            ?.take(pageSize)
-            ?.map { file ->
-                ImageItem(
-                    file = file,
-                    type = when (file.extension.lowercase()) {
-                        "mp4" -> ImageItem.MediaType.VIDEO
-                        else -> ImageItem.MediaType.IMAGE
-                    }
-                )
-            }
-            ?: emptyList()
-    }
-
     // State to track update operation status
     private val _updateStatus = MutableStateFlow<UpdateStatus?>(null)
     val updateStatus: StateFlow<UpdateStatus?> = _updateStatus.asStateFlow()
@@ -199,7 +148,6 @@ class ProfileViewModel(private val context: Context) : ViewModel() {
         data class Error(val message: String) : UpdateStatus()
     }
 
-    // Method to update user profile
     fun updateUserProfile(userData: UserData) {
         viewModelScope.launch {
             try {
@@ -243,7 +191,6 @@ class ProfileViewModel(private val context: Context) : ViewModel() {
         }
     }
 
-    // Clear update status
     fun clearUpdateStatus() {
         _updateStatus.value = null
     }
