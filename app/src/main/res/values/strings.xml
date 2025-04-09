@@ -21,7 +21,8 @@
     <string name="title_notifications">Notifications</string>
     <string name="title_map">Map</string>
     <string name="title_search">Search</string>
-    <string name="loadingImage">false</string>>
+    <string name="loadingImage">false</string>
+    <string name="google_client_id">288851956695-usf73cr5teh53jk8trdneq0611gs2dmu.apps.googleusercontent.com</string>
 
 
     <string name="BaseURL">https://echomap-api.aetherrflare.org</string>

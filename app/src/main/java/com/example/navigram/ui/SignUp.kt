@@ -81,24 +81,35 @@ class SignUp : AppCompatActivity() {
                 val result = registerToNetwork(user, pass, emailAdd)
                 loading.visibility = View.GONE
 
-                if (result.startsWith("{")) {
-                    try {
+                println("Debug - Raw Result: $result") // Debug the raw response
+                try {
+                    if (result.contains("error")) {
+                        val errorMessage = if (result.contains("already exists")) {
+                            "Username or email already exists"
+                        } else if (result.contains("invalid")) {
+                            "Invalid input data"
+                        } else {
+                            result
+                        }
+                        Toast.makeText(this@SignUp, errorMessage, Toast.LENGTH_LONG).show()
+                    } else {
                         val post = Gson().fromJson(result, SignUpResponse::class.java)
-                        if (post.status == 200) {
+                        if (post != null && post.token.isNotEmpty()) {
+                            saveToken(this@SignUp, post.token, post.username)
                             Toast.makeText(this@SignUp, "Account Created Successfully!", Toast.LENGTH_LONG).show()
-                            val intent = Intent(this@SignUp, LoginActivity::class.java)
+                            val intent = Intent(this@SignUp, MainActivity::class.java)
                             startActivity(intent)
                             finish()
                         } else {
-                            Toast.makeText(this@SignUp, "Error: ${post.status}", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@SignUp, "Invalid response from server", Toast.LENGTH_LONG).show()
                         }
-                    } catch (e: JsonSyntaxException) {
-                        Toast.makeText(this@SignUp, "Failed to parse API response", Toast.LENGTH_LONG).show()
                     }
-                }
-
-                else {
-                    Toast.makeText(this@SignUp, result, Toast.LENGTH_LONG).show()
+                } catch (e: JsonSyntaxException) {
+                    println("Debug - Parse Error: ${e.message}") // Debug parse errors
+                    Toast.makeText(this@SignUp, "Failed to parse server response: $result", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    println("Debug - General Error: ${e.message}") // Debug general errors
+                    Toast.makeText(this@SignUp, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -107,7 +118,7 @@ class SignUp : AppCompatActivity() {
     // Function to send registration data to server
     private suspend fun registerToNetwork(username: String, password: String, email: String): String {
         return withContext(Dispatchers.IO) {
-            val url = URL("${getString(R.string.BaseURL)}api/auth/register")
+            val url = URL("${getString(R.string.BaseURL)}/api/auth/register")
             (url.openConnection() as HttpURLConnection).run {
                 requestMethod = "POST"
                 connectTimeout = 10000
@@ -127,20 +138,27 @@ class SignUp : AppCompatActivity() {
                         writer.flush()
                     }
 
-                    val response = inputStream.bufferedReader().use { it.readText() }
-
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
-                        response
-                    } else {
-                        "Error: $responseCode - $response"
+                    val responseText = when (responseCode) {
+                        HttpURLConnection.HTTP_OK -> {
+                            inputStream.bufferedReader().use { it.readText() }
+                        }
+                        else -> {
+                            val errorStream = errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+                            println("Debug - Error Response: $errorStream") // Debug log
+                            errorStream
+                        }
                     }
+                    println("Debug - Response Code: $responseCode") // Debug log
+                    println("Debug - Response: $responseText") // Debug log
+                    responseText
                 } catch (e: Exception) {
-                    if(responseCode == 500)
-                        "User already exist"
-                    else
-                        "Failed to fetch Data"
-                } finally {
-                    disconnect()
+                    println("Debug - Exception: ${e.message}") // Debug log
+                    when (responseCode) {
+                        409 -> "User already exists"
+                        400 -> "Invalid input data"
+                        500 -> "Server error occurred"
+                        else -> "Network error: ${e.message ?: "Unknown error"}"
+                    }
                 }
             }
         }

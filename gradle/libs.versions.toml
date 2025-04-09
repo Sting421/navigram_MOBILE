@@ -30,6 +30,7 @@ cameraLifecycle = "1.4.2"
 cameraView = "1.4.2"
 playServicesLocation = "21.3.0"
 playServicesMaps = "19.1.0"
+googleAuth = "20.7.0"
 
 recyclerview = "1.4.0"
 glide = "4.16.0"
@@ -92,6 +93,9 @@ osmdroid-android = { module = "org.osmdroid:osmdroid-android", version.ref = "os
 
 # Cloudinary
 cloudinary-android = { module = "com.cloudinary:cloudinary-android", version.ref = "cloudinary" }
+
+# Google Sign In
+play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "googleAuth" }
 
 # Compose libraries
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "compose_version" }

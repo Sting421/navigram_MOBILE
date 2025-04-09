@@ -58,7 +58,7 @@
             android:label="@string/title_activity_dashboard" />
         <activity
             android:name=".ui.login.LoginActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="@string/title_activity_login" />
         <activity
             android:name=".MainActivity"

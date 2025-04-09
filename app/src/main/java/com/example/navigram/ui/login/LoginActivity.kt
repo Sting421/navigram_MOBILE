@@ -4,6 +4,12 @@ import android.content.Intent
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import android.os.Bundle
+import android.util.Log
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
+import com.google.android.gms.common.api.ApiException
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import android.text.Editable
@@ -52,12 +58,49 @@ val baseUrl = dotenv["BASE_URL"]  // Retrieve the BASE_URL environment variable
 
 class LoginActivity : AppCompatActivity() {
     private val _text = MutableLiveData<String>()
+    private lateinit var googleSignInClient: GoogleSignInClient
+    private val RC_SIGN_IN = 9001
 
     private lateinit var loginViewModel: LoginViewModel
     private lateinit var binding: ActivityLoginBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Configure Google Sign-In
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestEmail()
+            .requestProfile()
+            .requestServerAuthCode(getString(R.string.google_client_id), false)
+            .requestIdToken(getString(R.string.google_client_id))
+            .build()
+        googleSignInClient = GoogleSignIn.getClient(this, gso)
+
+        // Check for existing Google Sign In account and valid token
+        val lastSignedInAccount = GoogleSignIn.getLastSignedInAccount(this)
+        val savedToken = getToken(this)
+        
+        Log.d("GoogleSignIn", "Checking existing sign in - Account: ${lastSignedInAccount?.email}, Token exists: ${savedToken != null}")
+        
+        if (lastSignedInAccount != null) {
+            if (savedToken != null) {
+                // User is already signed in with both Google account and valid token
+                Log.d("GoogleSignIn", "Found valid sign in, proceeding to Dashboard")
+                startActivity(Intent(this, Dashboard::class.java))
+                finish()
+                return
+            } else {
+                // We have Google account but no valid token, sign out from Google
+                Log.d("GoogleSignIn", "Found Google account but no valid token, signing out")
+                googleSignInClient.signOut().addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        Log.d("GoogleSignIn", "Sign out completed successfully")
+                    } else {
+                        Log.e("GoogleSignIn", "Sign out failed: ${task.exception}")
+                    }
+                }
+            }
+        }
 
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -68,6 +111,7 @@ class LoginActivity : AppCompatActivity() {
         val signUp = binding.signUp
         val loading = binding.loading
         val loginasGuest = binding.loginasGuest
+        val loginWithGoogle = binding.loginWithGoogle
         loginViewModel = ViewModelProvider(this, LoginViewModelFactory())
             .get(LoginViewModel::class.java)
 
@@ -86,6 +130,11 @@ class LoginActivity : AppCompatActivity() {
         })
 
 
+
+        loginWithGoogle?.setOnClickListener {
+            loading.visibility = View.VISIBLE
+            signInWithGoogle()
+        }
 
         username.afterTextChanged {
             loginViewModel.loginDataChanged(
@@ -192,8 +241,8 @@ class LoginActivity : AppCompatActivity() {
 
                 (url.openConnection() as HttpURLConnection).run {
                     requestMethod = "POST"
-                    connectTimeout = 5000 // Increase timeout to avoid premature failures
-                    readTimeout = 5000
+                    connectTimeout = 10000 // Increase timeout to avoid premature failures
+                    readTimeout = 10000
                     setRequestProperty("Content-Type", "application/json")
                     doOutput = true
 
@@ -291,6 +340,136 @@ class LoginActivity : AppCompatActivity() {
 
             }
         }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == RC_SIGN_IN) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+            try {
+                val account = task.getResult(ApiException::class.java)
+                // Log account details for debugging
+                Log.d("GoogleSignIn", "Email: ${account.email}")
+                Log.d("GoogleSignIn", "Display Name: ${account.displayName}")
+                Log.d("GoogleSignIn", "ID: ${account.id}")
+                Log.d("GoogleSignIn", "ID Token: ${account.idToken}")
+                // Successfully signed in
+                CoroutineScope(Dispatchers.Main).launch {
+                    val baseUrl = getString(R.string.BaseURL)
+                    val url = URL("$baseUrl/api/auth/google")
+                    val result = withContext(Dispatchers.IO) {
+                        try {
+                            (url.openConnection() as HttpURLConnection).run {
+                                requestMethod = "POST"
+                                setRequestProperty("Content-Type", "application/json")
+                                doOutput = true
+
+                                val jsonPayload = JSONObject().apply {
+                                    put("email", account.email)
+                                    put("name", account.displayName)
+                                    put("googleId", account.id)
+                                    put("idToken", account.idToken)
+                                    account.serverAuthCode?.let { code ->
+                                        put("serverAuthCode", code)
+                                    }
+                                }
+                                // Log the payload for debugging
+                                Log.d("GoogleSignIn", "Sending payload: ${jsonPayload.toString()}")
+
+                                OutputStreamWriter(outputStream).use { writer ->
+                                    writer.write(jsonPayload.toString())
+                                    writer.flush()
+                                }
+
+                                val response = inputStream.bufferedReader().use { it.readText() }
+                                Log.d("GoogleSignIn", "API Response Code: $responseCode")
+                                Log.d("GoogleSignIn", "API Response: $response")
+                                
+                                when (responseCode) {
+                                    HttpURLConnection.HTTP_OK -> try {
+                                        val loginResponse = Gson().fromJson(response, LoginResponse::class.java)
+                                        if (loginResponse.token.isNotEmpty()) {
+                                            Log.d("GoogleSignIn", "Login successful, token: ${loginResponse.token}")
+                                            saveToken(this@LoginActivity, loginResponse.token, loginResponse.username)
+                                            
+                                            // Start Dashboard activity
+                                            val intent = Intent(this@LoginActivity, Dashboard::class.java)
+                                            startActivity(intent)
+                                            finish()
+                                        } else {
+                                            throw Exception("Invalid token received")
+                                        }
+                                    } catch (e: JsonSyntaxException) {
+                                        Log.e("GoogleSignIn", "Failed to parse response", e)
+                                        throw Exception("Invalid response format from server")
+                                    }
+                                    
+                                    HttpURLConnection.HTTP_UNAUTHORIZED -> {
+                                        Log.e("GoogleSignIn", "Authentication failed")
+                                        throw Exception("Authentication failed. Please try again.")
+                                    }
+                                    
+                                    else -> {
+                                        var errorMessage = "Server error"
+                                        try {
+                                            // Try to read from error stream first
+                                            val errorResponse = errorStream?.bufferedReader()?.use { it.readText() } ?: response
+                                            Log.d("GoogleSignIn", "Error response: $errorResponse")
+                                            
+                                            val errorJson = JSONObject(errorResponse)
+                                            errorMessage = errorJson.optString("message", errorMessage)
+                                            if (errorMessage == "Server error") {
+                                                // If no specific message found, include the full error response
+                                                errorMessage = "Server error: $errorResponse"
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e("GoogleSignIn", "Error parsing error response", e)
+                                            errorMessage = "Server error ($responseCode)"
+                                        }
+                                        throw Exception(errorMessage)
+                                    }
+                                }
+                            }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                Log.e("GoogleSignIn", "Server error details:", e)
+                                var errorMessage = when {
+                                    e is IOException -> "Network error. Please check your connection."
+                                    e.message?.contains("401") == true -> "Authentication failed. Please try again."
+                                    e.message?.contains("400") == true -> "Invalid request. Please try again."
+                                    else -> "Sign-in failed: ${e.message}"
+                                }
+                                runOnUiThread {
+                                    Toast.makeText(this@LoginActivity, errorMessage, Toast.LENGTH_LONG).show()
+                                    binding.loading.visibility = View.GONE
+                                }
+                                // Sign out from Google to ensure a fresh sign-in next time
+                                googleSignInClient.signOut()
+                            }
+                    }
+                }
+            } catch (e: ApiException) {
+                // Log detailed error information
+                val errorMessage = when(e.statusCode) {
+                    GoogleSignInStatusCodes.SIGN_IN_CANCELLED -> "Sign in cancelled"
+                    GoogleSignInStatusCodes.SIGN_IN_FAILED -> "Sign in failed"
+                    GoogleSignInStatusCodes.SIGN_IN_CURRENTLY_IN_PROGRESS -> "Sign in already in progress"
+                    GoogleSignInStatusCodes.INVALID_ACCOUNT -> "Invalid account"
+                    GoogleSignInStatusCodes.SIGN_IN_REQUIRED -> "Sign in required"
+                    GoogleSignInStatusCodes.NETWORK_ERROR -> "Network error"
+                    else -> "Unknown error: ${e.statusCode}"
+                }
+                Log.e("GoogleSignIn", "Sign in failed: $errorMessage", e)
+                Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
+                binding.loading.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun signInWithGoogle() {
+        val signInIntent = googleSignInClient.signInIntent
+        startActivityForResult(signInIntent, RC_SIGN_IN)
     }
 
     private fun updateUiWithUser(model: LoggedInUserView) {
