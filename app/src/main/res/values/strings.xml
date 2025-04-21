@@ -23,13 +23,13 @@
     <string name="title_search">Search</string>
     <string name="loadingImage">false</string>
     <string name="google_client_id">288851956695-usf73cr5teh53jk8trdneq0611gs2dmu.apps.googleusercontent.com</string>
-
+    <string name="google_oauth_redirect">com.example.navigram:/oauth2redirect</string>
+    <string name="google_oauth_scheme">com.example.navigram</string>
 
     <string name="BaseURL">https://echomap-api.aetherrflare.org</string>
-    <string name="capture">Capture</string>s
+    <string name="capture">Capture</string>
     <string name="switch_camera">Front camera</string>
     <!--    User Data-->
     <string name="username">username</string>
-
 
 </resources>

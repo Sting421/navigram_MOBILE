@@ -40,8 +40,23 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import com.bumptech.glide.Glide
 import android.widget.ImageView
 import com.example.navigram.data.api.CreateMemoryResponse
-
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
+import java.util.concurrent.TimeUnit
+import java.time.format.DateTimeFormatter
 class MapFragment : Fragment() {
+    private val client by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .build()
+    }
+    private val TAG = "MapFragment"
+
     companion object {
         private const val ZOOM_LEVEL = 7.0
         private const val CLUSTER_DISTANCE_THRESHOLD = 0.05 // Base threshold in kilometers
@@ -58,6 +73,9 @@ class MapFragment : Fragment() {
 
     private lateinit var progressIndicator: CircularProgressIndicator
     private lateinit var refreshButton: FloatingActionButton
+
+    val inputFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    val outputFormat = DateTimeFormatter.ofPattern("MMMM d, yyyy")
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -307,9 +325,42 @@ class MapFragment : Fragment() {
 
         // Initialize dialog views
         val memoryImage = dialog.findViewById<ImageView>(R.id.memory_image)
+        val memoryUsername = dialog.findViewById<TextView>(R.id.memory_username)
         val memoryDescription = dialog.findViewById<TextView>(R.id.memory_description)
         val memoryDate = dialog.findViewById<TextView>(R.id.memory_date)
         val memoryLocation = dialog.findViewById<TextView>(R.id.memory_location)
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val locationText = withContext(Dispatchers.IO) {
+                    val request = Request.Builder()
+                        .url("https://address-from-to-latitude-longitude.p.rapidapi.com/geolocationapi?lat=${memory.latitude}&lng=${memory.longitude}")
+                        .get()
+                        .addHeader("x-rapidapi-key", "fc33d176bdmsh77abb4787653b11p100a6cjsn63a64fd53e22")
+                        .addHeader("x-rapidapi-host", "address-from-to-latitude-longitude.p.rapidapi.com")
+                        .build()
+
+                    val response = client.newCall(request).execute()
+                    val responseBody = response.body?.string()
+
+                    val jsonResponse = JSONObject(responseBody ?: "{}")
+
+                    val results = jsonResponse.optJSONArray("Results")
+                    Log.d(TAG, "Results array: ${results?.toString(2)}")
+                    val address = if (results != null && results.length() > 0) {
+                        val firstResult = results.getJSONObject(0)
+                        firstResult.optString("address", "Location not available")
+                    } else {
+                        "Location not available"
+                    }
+                    "📍 $address"
+                }
+                memoryLocation.text = locationText
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching location: ${e.message}", e)
+                memoryLocation.text = "📍 Location not available"
+            }
+        }
+
 
         // Load memory data
         Glide.with(requireContext())
@@ -319,6 +370,19 @@ class MapFragment : Fragment() {
             .error(R.drawable.navigramlogo)
             .into(memoryImage)
 
+        // Set initial loading state for username
+        memoryUsername.text = "Loading..."
+
+        // Load username
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                memoryUsername.text = memory.username
+            } catch (e: Exception) {
+                Log.e("MapFragment", "Error loading username", e)
+                memoryUsername.text = "Unknown User"
+            }
+        }
+        memoryUsername.text = memory.username
         memoryDescription.text = memory.description
         memoryDate.text = memory.createdAt
         memoryLocation.text = "📍 ${memory.latitude}, ${memory.longitude}"
@@ -330,4 +394,7 @@ class MapFragment : Fragment() {
 
         dialog.show()
     }
+
+
+
 }

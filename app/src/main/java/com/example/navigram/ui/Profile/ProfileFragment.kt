@@ -224,7 +224,7 @@ class ProfileFragment : Fragment() {
         dialog.show()
     }
 
-    private fun showMemoryDetailsDialog(memory: com.example.navigram.data.api.CreateMemoryResponse) {
+     fun showMemoryDetailsDialog(memory: com.example.navigram.data.api.CreateMemoryResponse) {
         val dialog = Dialog(requireContext())
         dialog.setContentView(R.layout.dialog_memory_details)
 
@@ -260,7 +260,7 @@ class ProfileFragment : Fragment() {
                     val responseBody = response.body?.string()
                     Log.d(TAG, "API Response: $responseBody")
                     val jsonResponse = JSONObject(responseBody ?: "{}")
-                    
+
                     val results = jsonResponse.optJSONArray("Results")
                     Log.d(TAG, "Results array: ${results?.toString(2)}")
                     val address = if (results != null && results.length() > 0) {

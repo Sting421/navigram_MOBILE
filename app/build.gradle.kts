@@ -26,11 +26,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            applicationIdSuffix = "NaviGram"
             versionNameSuffix = "1.0"
         }
         getByName("debug") {
-            applicationIdSuffix = "Navigram"
             versionNameSuffix = "1"
         }
     }
@@ -81,7 +79,6 @@ dependencies {
     implementation(libs.androidx.recyclerview)
     implementation(libs.androidx.viewpager2)
     implementation(libs.glide)
-    kapt(libs.glide.compiler)
     implementation(libs.androidx.fragment.ktx)
 
     testImplementation(libs.junit)

@@ -9,6 +9,7 @@ import com.example.navigram.R
 import com.example.navigram.data.api.ApiService
 import com.example.navigram.data.api.AuthInterceptor
 import com.example.navigram.data.api.CreateMemoryResponse
+import com.example.navigram.data.api.UserResponse
 import com.example.navigram.ui.login.getToken
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -55,6 +56,11 @@ class MapViewModel(context: Context) : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    // Cache for user details
+    private val userCache = mutableMapOf<String, UserResponse>()
+    private val _currentUser = MutableStateFlow<UserResponse?>(null)
+    val currentUser: StateFlow<UserResponse?> = _currentUser.asStateFlow()
+
     private val _clusterMemories = MutableStateFlow<List<CreateMemoryResponse>>(emptyList())
     val clusterMemories: StateFlow<List<CreateMemoryResponse>> = _clusterMemories.asStateFlow()
 
@@ -62,6 +68,48 @@ class MapViewModel(context: Context) : ViewModel() {
     private val backoffTime = 2000L // 2 seconds backoff
     private var errorCount = 0
     private var memoryFetched = false
+
+    suspend fun getUserDetails(userId: String): UserResponse? {
+        return userCache[userId] ?: try {
+            val response = apiService.getPublicUserProfile(userId)
+            if (response.isSuccessful && response.body() != null) {
+                response.body()?.also { user ->
+                    userCache[userId] = user
+                }
+            } else {
+                // Try getting user from all users list if individual fetch fails
+                try {
+                    val allUsersResponse = apiService.getAllUsers()
+                    if (allUsersResponse.isSuccessful) {
+                        allUsersResponse.body()?.find { it.id == userId }?.also { user ->
+                            userCache[userId] = user
+                        }
+                    } else {
+                        null
+                    }
+                } catch (e: Exception) {
+                    Log.e("MapViewModel", "Error fetching all users", e)
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MapViewModel", "Error fetching user details", e)
+            // Try getting user from all users list as fallback
+            try {
+                val allUsersResponse = apiService.getAllUsers()
+                if (allUsersResponse.isSuccessful) {
+                    allUsersResponse.body()?.find { it.id == userId }?.also { user ->
+                        userCache[userId] = user
+                    }
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                Log.e("MapViewModel", "Error fetching all users", e)
+                null
+            }
+        }
+    }
 
     init {
         loadPublicMemories()

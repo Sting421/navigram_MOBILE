@@ -37,7 +37,8 @@ data class CreateMemoryResponse(
     val description: String,
     val visibility: String,
     val createdAt: String,
-    val userId: String
+    val userId: String,
+    val username: String,
 )
 
 data class UpdateUserRequest(
@@ -61,7 +62,25 @@ data class UserResponse(
     val username: String
 )
 
+data class Auth0TokenRequest(
+    val email: String,
+    val name: String,
+    val googleId: String,
+    val idToken: String,
+    val serverAuthCode: String?,
+    val grantType: String = "authorization_code"
+)
+
+data class AuthResponse(
+    val token: String,
+    val username: String,
+    val status: Int
+)
+
 interface ApiService {
+    @POST("api/auth/social/auth0/exchange")
+    suspend fun exchangeAuth0Token(@Body request: Auth0TokenRequest): Response<AuthResponse>
+
     @POST("api/memories")
     suspend fun createMemory(@Body request: CreateMemoryRequest): Response<CreateMemoryResponse>
 
@@ -79,6 +98,9 @@ interface ApiService {
 
     @GET("api/users/all")
     suspend fun getAllUsers(): Response<List<UserResponse>>
+
+
+
 
     // Removed the old searchUsers endpoint as filtering is now done client-side
     // @GET("api/users/search")
