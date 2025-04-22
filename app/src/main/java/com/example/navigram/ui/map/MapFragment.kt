@@ -15,6 +15,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.example.navigram.ui.memory.MemoryDetailsDialog
 import com.example.navigram.R
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -47,6 +48,7 @@ import okhttp3.Request
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 import java.time.format.DateTimeFormatter
+
 class MapFragment : Fragment() {
     private val client by lazy {
         OkHttpClient.Builder()
@@ -74,7 +76,7 @@ class MapFragment : Fragment() {
     private lateinit var progressIndicator: CircularProgressIndicator
     private lateinit var refreshButton: FloatingActionButton
 
-    val inputFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    val inputFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
     val outputFormat = DateTimeFormatter.ofPattern("MMMM d, yyyy")
 
     override fun onCreateView(
@@ -106,7 +108,6 @@ class MapFragment : Fragment() {
         myLocationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(context), map)
         myLocationOverlay.enableMyLocation()
         map.overlays.add(myLocationOverlay)
-
 
         // Set up my location button
         view.findViewById<FloatingActionButton>(R.id.my_location_button).setOnClickListener {
@@ -228,7 +229,8 @@ class MapFragment : Fragment() {
                         val marker = Marker(map).apply {
                             position = GeoPoint(memory.latitude, memory.longitude)
                             title = memory.description
-                            snippet = "Created: ${memory.createdAt}"
+                            val date = java.time.LocalDateTime.parse(memory.createdAt, inputFormat).toLocalDate()
+                            snippet = "Created: ${outputFormat.format(date)}"
                             icon = requireContext().resources.getDrawable(R.drawable.mappin2, null)
                             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                             setOnMarkerClickListener { clickedMarker, _ ->
@@ -320,81 +322,11 @@ class MapFragment : Fragment() {
     }
 
     private fun showMemoryDetailsDialog(memory: CreateMemoryResponse) {
-        val dialog = Dialog(requireContext())
-        dialog.setContentView(R.layout.dialog_memory_details)
-
-        // Initialize dialog views
-        val memoryImage = dialog.findViewById<ImageView>(R.id.memory_image)
-        val memoryUsername = dialog.findViewById<TextView>(R.id.memory_username)
-        val memoryDescription = dialog.findViewById<TextView>(R.id.memory_description)
-        val memoryDate = dialog.findViewById<TextView>(R.id.memory_date)
-        val memoryLocation = dialog.findViewById<TextView>(R.id.memory_location)
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                val locationText = withContext(Dispatchers.IO) {
-                    val request = Request.Builder()
-                        .url("https://address-from-to-latitude-longitude.p.rapidapi.com/geolocationapi?lat=${memory.latitude}&lng=${memory.longitude}")
-                        .get()
-                        .addHeader("x-rapidapi-key", "fc33d176bdmsh77abb4787653b11p100a6cjsn63a64fd53e22")
-                        .addHeader("x-rapidapi-host", "address-from-to-latitude-longitude.p.rapidapi.com")
-                        .build()
-
-                    val response = client.newCall(request).execute()
-                    val responseBody = response.body?.string()
-
-                    val jsonResponse = JSONObject(responseBody ?: "{}")
-
-                    val results = jsonResponse.optJSONArray("Results")
-                    Log.d(TAG, "Results array: ${results?.toString(2)}")
-                    val address = if (results != null && results.length() > 0) {
-                        val firstResult = results.getJSONObject(0)
-                        firstResult.optString("address", "Location not available")
-                    } else {
-                        "Location not available"
-                    }
-                    "📍 $address"
-                }
-                memoryLocation.text = locationText
-            } catch (e: Exception) {
-                Log.e(TAG, "Error fetching location: ${e.message}", e)
-                memoryLocation.text = "📍 Location not available"
-            }
-        }
-
-
-        // Load memory data
-        Glide.with(requireContext())
-            .load(memory.mediaUrl)
-            .centerCrop()
-            .placeholder(R.drawable.navigramlogo)
-            .error(R.drawable.navigramlogo)
-            .into(memoryImage)
-
-        // Set initial loading state for username
-        memoryUsername.text = "Loading..."
-
-        // Load username
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                memoryUsername.text = memory.username
-            } catch (e: Exception) {
-                Log.e("MapFragment", "Error loading username", e)
-                memoryUsername.text = "Unknown User"
-            }
-        }
-        memoryUsername.text = memory.username
-        memoryDescription.text = memory.description
-        memoryDate.text = memory.createdAt
-        memoryLocation.text = "📍 ${memory.latitude}, ${memory.longitude}"
-
-        // Set up close button
-        dialog.findViewById<Button>(R.id.close_button).setOnClickListener {
-            dialog.dismiss()
-        }
-
-        dialog.show()
+        MemoryDetailsDialog(
+            requireContext(),
+            memory,
+            viewModel.apiService,
+            viewLifecycleOwner.lifecycleScope
+        ).show()
     }
-
-
-
 }

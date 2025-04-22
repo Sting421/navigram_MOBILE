@@ -77,6 +77,16 @@ data class AuthResponse(
     val status: Int
 )
 
+data class FlagMemoryRequest(
+    val memoryId: String,
+    val reason: String
+)
+
+data class FlagMemoryResponse(
+    val success: Boolean,
+    val message: String
+)
+
 interface ApiService {
     @POST("api/auth/social/auth0/exchange")
     suspend fun exchangeAuth0Token(@Body request: Auth0TokenRequest): Response<AuthResponse>
@@ -106,6 +116,13 @@ interface ApiService {
     // @GET("api/users/search")
     // suspend fun searchUsers(@Query("query") query: String): Response<List<UserResponse>>
 
+
     @GET("api/users/{userId}/profile")
     suspend fun getPublicUserProfile(@Path("userId") userId: String): Response<UserResponse>
+
+    @POST("api/users/{userId}/follow")
+    suspend fun followUser(@Path("userId") userId: String): Response<Unit>
+
+    @POST("api/flags")
+    suspend fun flagMemory(@Body request: FlagMemoryRequest): Response<FlagMemoryResponse>
 }

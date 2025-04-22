@@ -33,7 +33,7 @@ class MainActivity : AppCompatActivity() {
             insets
         }
         lifecycleScope.launch {
-            delay(2000) // Wait for 2 seconds instead of using Thread.sleep()
+//            delay(2000) // Wait for 2 seconds instead of using Thread.sleep()
 
             val isValid = validateToken(this@MainActivity)
             val intent = if (isValid) {

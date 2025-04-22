@@ -32,4 +32,19 @@
     <!--    User Data-->
     <string name="username">username</string>
 
+
+    <string name="share">Share</string>
+    <string name="close">Close</string>
+    <string name="more_options_description">More options</string>
+    <string name="memory_image_description">Memory image</string>
+    <string name="share_button_description">Share this memory</string>
+    <string name="close_button_description">Close this memory</string>
+    
+    <!-- Memory options menu -->
+    <string name="flag_memory">Flag Memory</string>
+    <string name="flag_memory_title">Flag Inappropriate Content</string>
+    <string name="flag_memory_message">Are you sure you want to flag this memory as inappropriate?</string>
+    <string name="flag_memory_confirm">Flag</string>
+    <string name="flag_memory_cancel">Cancel</string>
+
 </resources>
