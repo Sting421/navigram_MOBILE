@@ -12,13 +12,19 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.LifecycleCoroutineScope
+import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.example.navigram.R
 import com.example.navigram.data.api.ApiService
 import com.example.navigram.data.api.CreateMemoryResponse
+import com.example.navigram.data.api.CreateCommentRequest
 import com.example.navigram.data.api.FlagMemoryRequest
 import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.Request
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -28,7 +34,12 @@ class MemoryDetailsDialog(
     private val apiService: ApiService,
     private val lifecycleScope: LifecycleCoroutineScope
 ) {
+    companion object {
+        private const val TAG = "MemoryDetailsDialog"
+    }
+
     private lateinit var dialog: Dialog
+    private val client = okhttp3.OkHttpClient()
 
     fun show() {
         val dialogView = View.inflate(context, R.layout.dialog_memory_details, null)
@@ -52,12 +63,40 @@ class MemoryDetailsDialog(
     }
 
     private fun setupViews(view: View) {
+        // Set up comment views
+        val commentInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.comment_input)
+        val sendCommentButton = view.findViewById<ImageButton>(R.id.send_comment_button)
+
+        sendCommentButton.setOnClickListener {
+            val commentText = commentInput.text.toString().trim()
+            if (commentText.isNotEmpty()) {
+                lifecycleScope.launch {
+                    try {
+                        val request = CreateCommentRequest(
+                            memoryId = memory.id,
+                            content = commentText
+                        )
+                        val response = apiService.createComment(request)
+                        
+                        if (response.isSuccessful) {
+                            Toast.makeText(context, "Comment posted successfully", Toast.LENGTH_SHORT).show()
+                            commentInput.text?.clear()
+                        } else {
+                            Toast.makeText(context, "Failed to post comment", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+
         // Setting up views with memory data
         val memoryImage = view.findViewById<ImageView>(R.id.memory_image)
         val memoryDescription = view.findViewById<TextView>(R.id.memory_description)
         val memoryDate = view.findViewById<TextView>(R.id.memory_date)
         val memoryUsername = view.findViewById<TextView>(R.id.memory_username)
-        val memoryLocation = view.findViewById<TextView>(R.id.memory_location)
+        val profileImage = view.findViewById<ImageView>(R.id.profile_image)
         val optionsButton = view.findViewById<ImageButton>(R.id.memory_options_button)
         val shareButton = view.findViewById<MaterialButton>(R.id.share_button)
         val closeButton = view.findViewById<MaterialButton>(R.id.close_button)
@@ -65,6 +104,40 @@ class MemoryDetailsDialog(
         // Set memory data
         memoryDescription.text = memory.description
         memoryUsername.text = memory.username
+
+        val memoryLocation = view.findViewById<TextView>(R.id.memory_location)
+        lifecycleScope.launch {
+            try {
+                val locationText = withContext(Dispatchers.IO) {
+                    val request = Request.Builder()
+                        .url("https://address-from-to-latitude-longitude.p.rapidapi.com/geolocationapi?lat=${memory.latitude}&lng=${memory.longitude}")
+                        .get()
+                        .addHeader("x-rapidapi-key", "fc33d176bdmsh77abb4787653b11p100a6cjsn63a64fd53e22")
+                        .addHeader("x-rapidapi-host", "address-from-to-latitude-longitude.p.rapidapi.com")
+                        .build()
+
+                    val response = client.newCall(request).execute()
+                    val responseBody = response.body?.string()
+                    Log.d(TAG, "API Response: $responseBody")
+                    val jsonResponse = JSONObject(responseBody ?: "{}")
+
+                    val results = jsonResponse.optJSONArray("Results")
+                    Log.d(TAG, "Results array: ${results?.toString(2)}")
+                    val address = if (results != null && results.length() > 0) {
+                        val firstResult = results.getJSONObject(0)
+                        firstResult.optString("address", "Location not available")
+                    } else {
+                        "Location not available"
+                    }
+                    "$address"
+                }
+                memoryLocation.text = locationText
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching location: ${e.message}", e)
+                memoryLocation.text = "Location not available"
+            }
+        }
+
         try {
             val inputDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
             inputDateFormat.isLenient = true
@@ -90,6 +163,23 @@ class MemoryDetailsDialog(
                 .error(R.drawable.navigramlogo)
                 .into(memoryImage)
         }
+
+
+            Glide.with(context)
+                .load(R.drawable.navigramlogo)
+                .centerCrop()
+                .placeholder(R.drawable.navigramlogo)
+                .error(R.drawable.navigramlogo)
+                .into(profileImage)
+
+            // Set click listener for profile image to navigate to user profile
+            profileImage.setOnClickListener {
+                val intent = android.content.Intent(context, com.example.navigram.ui.UserDetailsActivity::class.java).apply {
+                    putExtra("username", memory.username)
+                }
+                context.startActivity(intent)
+            }
+
 
         // Setup options menu
         optionsButton.setOnClickListener { view ->

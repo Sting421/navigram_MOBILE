@@ -87,7 +87,24 @@ data class FlagMemoryResponse(
     val message: String
 )
 
+data class CreateCommentRequest(
+    val memoryId: String,
+    val content: String
+)
+
+data class CommentResponse(
+    val id: String,
+    val memoryId: String,
+    val content: String,
+    val userId: String,
+    val username: String,
+    val createdAt: String
+)
+
 interface ApiService {
+    @POST("api/comments")
+    suspend fun createComment(@Body request: CreateCommentRequest): Response<CommentResponse>
+
     @POST("api/auth/social/auth0/exchange")
     suspend fun exchangeAuth0Token(@Body request: Auth0TokenRequest): Response<AuthResponse>
 
@@ -117,7 +134,9 @@ interface ApiService {
     // suspend fun searchUsers(@Query("query") query: String): Response<List<UserResponse>>
 
 
-    @GET("api/users/{userId}/profile")
+
+
+    @GET("api/users/{userId}")
     suspend fun getPublicUserProfile(@Path("userId") userId: String): Response<UserResponse>
 
     @POST("api/users/{userId}/follow")
