@@ -6,6 +6,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.app.Dialog
 import android.content.Context
+import android.content.Intent
+import androidx.activity.result.contract.ActivityResultContracts
 
 import android.util.Log
 import android.widget.Button
@@ -51,6 +53,16 @@ class ProfileFragment : Fragment() {
 
     // Memory Adapter
     private lateinit var memoryAdapter: MemoryAdapter
+
+    // Register activity result launcher for edit profile
+    private val editProfileLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            // Reload user data after successful profile update
+            viewModel.loadUserProfile()
+        }
+    }
 
     // Memory list type with fully qualified name
     private var memories: List<com.example.navigram.data.api.CreateMemoryResponse> = emptyList()
@@ -182,46 +194,19 @@ class ProfileFragment : Fragment() {
     }
 
     private fun showEditProfileDialog() {
-        val dialog = Dialog(requireContext())
-        dialog.setContentView(R.layout.dialog_edit_profile)
-
-        // Initialize dialog views
-        val nameInput = dialog.findViewById<TextInputEditText>(R.id.edit_name)
-        val usernameInput = dialog.findViewById<TextInputEditText>(R.id.edit_username)
-        val emailInput = dialog.findViewById<TextInputEditText>(R.id.edit_email)
-        val phoneInput = dialog.findViewById<TextInputEditText>(R.id.edit_phone)
-
-        // Pre-fill current user data
+        // Launch EditProfileActivity
+        val intent = Intent(requireContext(), EditProfileActivity::class.java)
         viewModel.userData.value?.let { user ->
-            nameInput.setText(user.name)
-            usernameInput.setText(user.username)
-            emailInput.setText(user.email)
-            phoneInput.setText(user.phoneNumber)
+            intent.putExtra("NAME", user.name)
+            intent.putExtra("USERNAME", user.username)
+            intent.putExtra("EMAIL", user.email)
+            intent.putExtra("PHONE", user.phoneNumber)
+            intent.putExtra("PROFILE_PICTURE", user.profilePicture)
+            intent.putExtra("USER_ID", user.id)
+            intent.putExtra("ROLE", user.role)
+            intent.putExtra("SOCIAL_LOGIN", user.socialLogin)
         }
-
-        // Set up dialog buttons
-        dialog.findViewById<Button>(R.id.btn_cancel).setOnClickListener {
-            dialog.dismiss()
-        }
-
-        dialog.findViewById<Button>(R.id.btn_save).setOnClickListener {
-            viewModel.userData.value?.let { currentUser ->
-                val updatedUser = UserData(
-                    username = usernameInput.text.toString(),
-                    email = emailInput.text.toString(),
-                    name = nameInput.text.toString(),
-                    profilePicture = currentUser.profilePicture,
-                    phoneNumber = phoneInput.text.toString(),
-                    role = currentUser.role,
-                    id = currentUser.id,
-                    socialLogin = currentUser.socialLogin
-                )
-                viewModel.updateUserProfile(updatedUser)
-                dialog.dismiss()
-            }
-        }
-
-        dialog.show()
+        editProfileLauncher.launch(intent)
     }
 
      fun showMemoryDetailsDialog(memory: com.example.navigram.data.api.CreateMemoryResponse) {

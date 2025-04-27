@@ -97,6 +97,11 @@
             android:label="User Profile" />
             
         <activity
+            android:name=".ui.Profile.EditProfileActivity"
+            android:exported="false"
+            android:label="Edit Profile" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

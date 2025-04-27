@@ -102,6 +102,9 @@ data class CommentResponse(
 )
 
 interface ApiService {
+    @GET("api/comments/memory/{memoryId}")
+    suspend fun getMemoryComments(@Path("memoryId") memoryId: String): Response<List<CommentResponse>>
+
     @POST("api/comments")
     suspend fun createComment(@Body request: CreateCommentRequest): Response<CommentResponse>
 

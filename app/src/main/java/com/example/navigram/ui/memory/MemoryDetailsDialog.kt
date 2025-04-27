@@ -39,6 +39,7 @@ class MemoryDetailsDialog(
     }
 
     private lateinit var dialog: Dialog
+    private lateinit var commentsAdapter: CommentAdapter
     private val client = okhttp3.OkHttpClient()
 
     fun show() {
@@ -63,6 +64,21 @@ class MemoryDetailsDialog(
     }
 
     private fun setupViews(view: View) {
+        // Set up RecyclerView and adapter for comments
+        val commentsRecyclerView = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.comments_recycler_view)
+        commentsAdapter = CommentAdapter()
+        commentsRecyclerView.apply {
+            adapter = commentsAdapter
+            layoutManager = androidx.recyclerview.widget.LinearLayoutManager(context).apply {
+                isAutoMeasureEnabled = false
+            }
+            setHasFixedSize(true)
+            isNestedScrollingEnabled = true
+        }
+
+        // Fetch comments when dialog is shown
+        fetchComments()
+
         // Set up comment views
         val commentInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.comment_input)
         val sendCommentButton = view.findViewById<ImageButton>(R.id.send_comment_button)
@@ -81,6 +97,8 @@ class MemoryDetailsDialog(
                         if (response.isSuccessful) {
                             Toast.makeText(context, "Comment posted successfully", Toast.LENGTH_SHORT).show()
                             commentInput.text?.clear()
+                            // Refresh comments after posting
+                            fetchComments()
                         } else {
                             Toast.makeText(context, "Failed to post comment", Toast.LENGTH_SHORT).show()
                         }
@@ -91,7 +109,11 @@ class MemoryDetailsDialog(
             }
         }
 
-        // Setting up views with memory data
+        // Set up memory views
+        setupMemoryViews(view)
+    }
+
+    private fun setupMemoryViews(view: View) {
         val memoryImage = view.findViewById<ImageView>(R.id.memory_image)
         val memoryDescription = view.findViewById<TextView>(R.id.memory_description)
         val memoryDate = view.findViewById<TextView>(R.id.memory_date)
@@ -105,6 +127,37 @@ class MemoryDetailsDialog(
         memoryDescription.text = memory.description
         memoryUsername.text = memory.username
 
+        // Set up location
+        setupLocation(view)
+
+        // Set up date
+        setupDate(memoryDate)
+
+        // Load images
+        loadImages(memoryImage, profileImage)
+
+        // Set up click listeners
+        profileImage.setOnClickListener {
+            val intent = android.content.Intent(context, com.example.navigram.ui.UserDetailsActivity::class.java).apply {
+                putExtra("username", memory.username)
+            }
+            context.startActivity(intent)
+        }
+
+        optionsButton.setOnClickListener { view ->
+            showOptionsMenu(view)
+        }
+
+        closeButton.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        shareButton.setOnClickListener {
+            // TODO: Implement share functionality
+        }
+    }
+
+    private fun setupLocation(view: View) {
         val memoryLocation = view.findViewById<TextView>(R.id.memory_location)
         lifecycleScope.launch {
             try {
@@ -137,7 +190,9 @@ class MemoryDetailsDialog(
                 memoryLocation.text = "Location not available"
             }
         }
+    }
 
+    private fun setupDate(memoryDate: TextView) {
         try {
             val inputDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
             inputDateFormat.isLenient = true
@@ -147,14 +202,15 @@ class MemoryDetailsDialog(
                 memoryDate.text = outputDateFormat.format(date)
             } else {
                 memoryDate.text = memory.createdAt
-                Log.e("MemoryDetailsDialog", "Failed to parse date: null result")
+                Log.e(TAG, "Failed to parse date: null result")
             }
         } catch (e: Exception) {
             memoryDate.text = memory.createdAt // Fallback to raw date string
-            Log.e("MemoryDetailsDialog", "Error parsing date: ${e.message}")
+            Log.e(TAG, "Error parsing date: ${e.message}")
         }
-        
-        // Load memory image
+    }
+
+    private fun loadImages(memoryImage: ImageView, profileImage: ImageView) {
         if (memory.mediaUrl.isNotEmpty()) {
             Glide.with(context)
                 .load(memory.mediaUrl)
@@ -164,37 +220,12 @@ class MemoryDetailsDialog(
                 .into(memoryImage)
         }
 
-
-            Glide.with(context)
-                .load(R.drawable.navigramlogo)
-                .centerCrop()
-                .placeholder(R.drawable.navigramlogo)
-                .error(R.drawable.navigramlogo)
-                .into(profileImage)
-
-            // Set click listener for profile image to navigate to user profile
-            profileImage.setOnClickListener {
-                val intent = android.content.Intent(context, com.example.navigram.ui.UserDetailsActivity::class.java).apply {
-                    putExtra("username", memory.username)
-                }
-                context.startActivity(intent)
-            }
-
-
-        // Setup options menu
-        optionsButton.setOnClickListener { view ->
-            showOptionsMenu(view)
-        }
-
-        // Setup close button
-        closeButton.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        // Setup share button
-        shareButton.setOnClickListener {
-            // TODO: Implement share functionality
-        }
+        Glide.with(context)
+            .load(R.drawable.navigramlogo)
+            .centerCrop()
+            .placeholder(R.drawable.navigramlogo)
+            .error(R.drawable.navigramlogo)
+            .into(profileImage)
     }
 
     private fun showOptionsMenu(view: View) {
@@ -242,6 +273,24 @@ class MemoryDetailsDialog(
                 }
             } catch (e: Exception) {
                 Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun fetchComments() {
+        lifecycleScope.launch {
+            try {
+                val response = apiService.getMemoryComments(memory.id)
+                if (response.isSuccessful) {
+                    response.body()?.let { comments ->
+                        commentsAdapter.updateComments(comments)
+                    }
+                } else {
+                    Toast.makeText(context, "Failed to load comments", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching comments: ${e.message}", e)
+                Toast.makeText(context, "Error loading comments", Toast.LENGTH_SHORT).show()
             }
         }
     }

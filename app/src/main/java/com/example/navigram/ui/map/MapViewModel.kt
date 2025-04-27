@@ -11,6 +11,7 @@ import com.example.navigram.data.api.AuthInterceptor
 import com.example.navigram.data.api.CreateMemoryResponse
 import com.example.navigram.data.api.UserResponse
 import com.example.navigram.ui.login.getToken
+import io.github.cdimascio.dotenv.dotenv
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +19,8 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+
+import io.github.cdimascio.dotenv.dotenv
 
 class MapViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -32,8 +35,10 @@ class MapViewModelFactory(private val context: Context) : ViewModelProvider.Fact
 class MapViewModel(context: Context) : ViewModel() {
     private val retrofit by lazy {
         val token = getToken(context) ?: throw IllegalStateException("No auth token found")
+
         val baseUrl = context.getString(R.string.BaseURL)
-        
+
+
         val client = OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(token))
             .build()

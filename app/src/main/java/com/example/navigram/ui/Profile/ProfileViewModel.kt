@@ -111,7 +111,7 @@ class ProfileViewModel(private val context: Context) : ViewModel() {
         _selectedMemory.value = null
     }
 
-    private fun loadUserProfile() {
+    fun loadUserProfile() {
         viewModelScope.launch {
             try {
                 val response = apiService.getUserProfile()
