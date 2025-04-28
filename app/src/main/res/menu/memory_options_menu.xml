@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
+        android:id="@+id/action_edit_memory"
+        android:title="@string/edit_memory"
+        android:visible="false" />
+    <item
+        android:id="@+id/action_delete_memory"
+        android:title="@string/delete_memory"
+        android:visible="false" />
+    <item
         android:id="@+id/action_flag_memory"
         android:title="@string/flag_memory" />
 </menu>

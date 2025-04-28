@@ -92,6 +92,15 @@ data class CreateCommentRequest(
     val content: String
 )
 
+data class UpdateMemoryRequest(
+    val latitude: Double,
+    val longitude: Double,
+    val mediaUrl: String,
+    val mediaType: String,
+    val description: String,
+    val visibility: String
+)
+
 data class CommentResponse(
     val id: String,
     val memoryId: String,
@@ -102,6 +111,15 @@ data class CommentResponse(
 )
 
 interface ApiService {
+    @PUT("api/memories/{id}")
+    suspend fun updateMemory(
+        @Path("id") memoryId: String,
+        @Body request: UpdateMemoryRequest
+    ): Response<CreateMemoryResponse>
+
+    @retrofit2.http.DELETE("api/memories/{id}")
+    suspend fun deleteMemory(@Path("id") memoryId: String): Response<Unit>
+
     @GET("api/comments/memory/{memoryId}")
     suspend fun getMemoryComments(@Path("memoryId") memoryId: String): Response<List<CommentResponse>>
 

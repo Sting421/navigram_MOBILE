@@ -46,5 +46,17 @@
     <string name="flag_memory_message">Are you sure you want to flag this memory as inappropriate?</string>
     <string name="flag_memory_confirm">Flag</string>
     <string name="flag_memory_cancel">Cancel</string>
+    
+    <!-- Memory edit/delete options -->
+    <string name="edit_memory">Edit Memory</string>
+    <string name="delete_memory">Delete Memory</string>
+    <string name="edit_memory_title">Edit Memory</string>
+    <string name="edit_memory_message">Edit memory details</string>
+    <string name="edit_memory_confirm">Save</string>
+    <string name="edit_memory_cancel">Cancel</string>
+    <string name="delete_memory_title">Delete Memory</string>
+    <string name="delete_memory_message">Are you sure you want to delete this memory? This action cannot be undone.</string>
+    <string name="delete_memory_confirm">Delete</string>
+    <string name="delete_memory_cancel">Cancel</string>
 
 </resources>

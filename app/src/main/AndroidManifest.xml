@@ -102,6 +102,11 @@
             android:label="Edit Profile" />
 
         <activity
+            android:name=".ui.MemoryCreation"
+            android:exported="false"
+            android:label="Create Memory" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

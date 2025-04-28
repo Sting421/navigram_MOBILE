@@ -7,6 +7,7 @@ import android.location.Location
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import com.example.navigram.ui.CreateMemoryActivity
 import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -73,13 +74,19 @@ class CameraCapture : AppCompatActivity() {
         previewView = findViewById(R.id.previewView)
         val btnCapture = findViewById<ImageButton>(R.id.btnCapture)
         val btnSwitchCamera = findViewById<ImageButton>(R.id.btnSwitchCamera)
+        val btnCreateMemory = findViewById<View>(R.id.btnCreateMemory)
         btnFlash = findViewById(R.id.flashBtn)
 
-         focusIndicatorView = findViewById(R.id.focusIndicator)
+        focusIndicatorView = findViewById(R.id.focusIndicator)
 
 
         startCamera()
         setupTouchFocus()
+
+        btnCreateMemory.setOnClickListener {
+            val intent = android.content.Intent(this, CreateMemoryActivity::class.java)
+            startActivity(intent)
+        }
 
         btnCapture.setOnClickListener {
             takePhoto()

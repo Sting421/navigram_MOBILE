@@ -7,7 +7,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.PopupMenu
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -19,6 +21,7 @@ import com.example.navigram.data.api.ApiService
 import com.example.navigram.data.api.CreateMemoryResponse
 import com.example.navigram.data.api.CreateCommentRequest
 import com.example.navigram.data.api.FlagMemoryRequest
+import com.example.navigram.data.api.UpdateMemoryRequest
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -30,10 +33,26 @@ import java.util.Locale
 
 class MemoryDetailsDialog(
     private val context: Context,
-    private val memory: CreateMemoryResponse,
+    private var memory: CreateMemoryResponse,
     private val apiService: ApiService,
     private val lifecycleScope: LifecycleCoroutineScope
 ) {
+    private var currentUserId: String? = null
+
+    init {
+        // Fetch current user profile when dialog is created
+        lifecycleScope.launch {
+            try {
+                val response = apiService.getUserProfile()
+                if (response.isSuccessful) {
+                    currentUserId = response.body()?.id
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching user profile: ${e.message}")
+            }
+        }
+    }
+
     companion object {
         private const val TAG = "MemoryDetailsDialog"
     }
@@ -231,9 +250,22 @@ class MemoryDetailsDialog(
     private fun showOptionsMenu(view: View) {
         val popup = PopupMenu(context, view)
         popup.menuInflater.inflate(R.menu.memory_options_menu, popup.menu)
+
+        // Show edit/delete options only for memory owner
+        val isOwner = currentUserId == memory.userId
+        popup.menu.findItem(R.id.action_edit_memory).isVisible = isOwner
+        popup.menu.findItem(R.id.action_delete_memory).isVisible = isOwner
         
         popup.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
+                R.id.action_edit_memory -> {
+                    showEditMemoryDialog()
+                    true
+                }
+                R.id.action_delete_memory -> {
+                    showDeleteConfirmationDialog()
+                    true
+                }
                 R.id.action_flag_memory -> {
                     showFlagConfirmationDialog()
                     true
@@ -243,6 +275,141 @@ class MemoryDetailsDialog(
         }
         
         popup.show()
+    }
+
+    private fun showEditMemoryDialog() {
+        val dialogView = View.inflate(context, R.layout.dialog_edit_memory, null)
+        val descriptionInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.edit_description_input)
+        val visibilitySpinner = dialogView.findViewById<Spinner>(R.id.edit_visibility_spinner)
+        
+        // Add buttons to the layout
+        val buttonLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setPadding(16, 8, 16, 8)
+        }
+
+        val saveButton = MaterialButton(context).apply {
+            text = context.getString(R.string.edit_memory_confirm)
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1.0f
+            ).apply {
+                marginEnd = 8
+            }
+        }
+
+        val cancelButton = MaterialButton(context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = context.getString(R.string.edit_memory_cancel)
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1.0f
+            ).apply {
+                marginStart = 8
+            }
+        }
+
+        buttonLayout.addView(saveButton)
+        buttonLayout.addView(cancelButton)
+
+        // Add button layout to the dialog
+        (dialogView as LinearLayout).addView(buttonLayout)
+
+        // Pre-fill existing data
+        descriptionInput.setText(memory.description)
+        val visibilityTypes = context.resources.getStringArray(R.array.visibility_types)
+        val visibilityIndex = visibilityTypes.indexOf(memory.visibility)
+        if (visibilityIndex != -1) {
+            visibilitySpinner.setSelection(visibilityIndex)
+        }
+
+        val dialog = Dialog(context, R.style.CustomDialog).apply {
+            setContentView(dialogView)
+            setCancelable(true)
+            setCanceledOnTouchOutside(true)
+            window?.apply {
+                setLayout(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+                setDimAmount(0.5f)
+            }
+        }
+
+        saveButton.setOnClickListener {
+            val updatedDescription = descriptionInput.text.toString()
+            val updatedVisibility = visibilitySpinner.selectedItem.toString()
+            updateMemory(updatedDescription, updatedVisibility)
+            dialog.dismiss()
+        }
+
+        cancelButton.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
+    private fun updateMemory(description: String, visibility: String) {
+        lifecycleScope.launch {
+            try {
+                val request = UpdateMemoryRequest(
+                    latitude = memory.latitude,
+                    longitude = memory.longitude,
+                    mediaUrl = memory.mediaUrl,
+                    mediaType = memory.mediaType,
+                    description = description,
+                    visibility = visibility
+                )
+                val response = apiService.updateMemory(memory.id, request)
+                
+                if (response.isSuccessful) {
+                    response.body()?.let { updatedMemory ->
+                        // Update the UI
+                        memory = updatedMemory  // Update the memory object first
+                        this@MemoryDetailsDialog.dialog.findViewById<TextView>(R.id.memory_description)?.text = updatedMemory.description
+                        Toast.makeText(context, "Memory updated successfully", Toast.LENGTH_SHORT).show()
+                    }
+                    dialog.dismiss()  // Dismiss the edit dialog
+                } else {
+                    Toast.makeText(context, "Failed to update memory", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun showDeleteConfirmationDialog() {
+        AlertDialog.Builder(context)
+            .setTitle(R.string.delete_memory_title)
+            .setMessage(R.string.delete_memory_message)
+            .setPositiveButton(R.string.delete_memory_confirm) { _, _ ->
+                deleteMemory()
+            }
+            .setNegativeButton(R.string.delete_memory_cancel, null)
+            .show()
+    }
+
+    private fun deleteMemory() {
+        lifecycleScope.launch {
+            try {
+                val response = apiService.deleteMemory(memory.id)
+                if (response.isSuccessful) {
+                    Toast.makeText(context, "Memory deleted successfully", Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                } else {
+                    Toast.makeText(context, "Failed to delete memory", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun showFlagConfirmationDialog() {

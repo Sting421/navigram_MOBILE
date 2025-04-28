@@ -45,8 +45,6 @@ class ProfileFragment : Fragment() {
     private lateinit var profileImage: ImageView
     private lateinit var profileUsername: TextView
     private lateinit var postCount: TextView
-    private lateinit var followersCount: TextView
-    private lateinit var followingCount: TextView
     private lateinit var editProfileButton: Button
     private lateinit var logoutButton: Button
     private lateinit var postsRecyclerView: RecyclerView
@@ -78,8 +76,6 @@ class ProfileFragment : Fragment() {
         profileImage = view.findViewById(R.id.profile_image)
         profileUsername = view.findViewById(R.id.profile_username)
         postCount = view.findViewById(R.id.profile_post_count)
-        followersCount = view.findViewById(R.id.profile_followers_count)
-        followingCount = view.findViewById(R.id.profile_following_count)
         editProfileButton = view.findViewById(R.id.edit_profile_button)
         logoutButton = view.findViewById(R.id.logout_button)
         postsRecyclerView = view.findViewById(R.id.profile_posts_recycler_view)
@@ -112,10 +108,6 @@ class ProfileFragment : Fragment() {
                             
                             // Set email in bio
                             view.findViewById<TextView>(R.id.profile_bio).text = user.email
-
-                            // Hide follower stats for now as they're not part of the API
-                            followersCount.text = "0"
-                            followingCount.text = "0"
 
                             // Load profile image if available
                             user.profilePicture?.let { url ->
