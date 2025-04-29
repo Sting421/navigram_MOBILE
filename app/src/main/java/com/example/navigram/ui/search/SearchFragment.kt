@@ -1,5 +1,6 @@
 package com.example.navigram.ui.search
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -8,13 +9,13 @@ import android.widget.SearchView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.navigram.NavigramApplication
 import com.example.navigram.R
 import com.example.navigram.data.api.ApiService
 import com.example.navigram.data.model.User
+import com.example.navigram.ui.UserDetailsActivity
 
 class SearchFragment : Fragment() {
 
@@ -83,8 +84,8 @@ class SearchFragment : Fragment() {
     }
 
     private fun onUserClick(user: User) {
-        val bundle = Bundle()
-        bundle.putString("userId", user.id)
-        findNavController().navigate(R.id.navigation_profile, bundle)
+        val intent = Intent(requireContext(), UserDetailsActivity::class.java)
+        intent.putExtra("user_id", user.id)
+        startActivity(intent)
     }
 }

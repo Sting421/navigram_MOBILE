@@ -52,7 +52,7 @@ data class UpdateUserRequest(
 )
 
 data class UserResponse(
-    val profilePicture: String?,
+    val profilePicture: String,
     val phoneNumber: String?,
     val role: String,
     val name: String?,
@@ -107,7 +107,25 @@ data class CommentResponse(
     val content: String,
     val userId: String,
     val username: String,
+    val profilePicture: String?,
     val createdAt: String
+)
+
+data class CommentsResponse(
+    val data: List<CommentResponse>,
+    val success: Boolean,
+    val message: String
+)
+
+data class FollowCountsResponse(
+    val data: FollowCounts,
+    val success: Boolean,
+    val message: String
+)
+
+data class FollowCounts(
+    val followers: Int,
+    val following: Int
 )
 
 interface ApiService {
@@ -121,7 +139,7 @@ interface ApiService {
     suspend fun deleteMemory(@Path("id") memoryId: String): Response<Unit>
 
     @GET("api/comments/memory/{memoryId}")
-    suspend fun getMemoryComments(@Path("memoryId") memoryId: String): Response<List<CommentResponse>>
+    suspend fun getMemoryComments(@Path("memoryId") memoryId: String): Response<CommentsResponse>
 
     @POST("api/comments")
     suspend fun createComment(@Body request: CreateCommentRequest): Response<CommentResponse>
@@ -147,16 +165,6 @@ interface ApiService {
     @GET("api/users/all")
     suspend fun getAllUsers(): Response<List<UserResponse>>
 
-
-
-
-    // Removed the old searchUsers endpoint as filtering is now done client-side
-    // @GET("api/users/search")
-    // suspend fun searchUsers(@Query("query") query: String): Response<List<UserResponse>>
-
-
-
-
     @GET("api/users/{userId}")
     suspend fun getPublicUserProfile(@Path("userId") userId: String): Response<UserResponse>
 
@@ -165,4 +173,7 @@ interface ApiService {
 
     @POST("api/flags")
     suspend fun flagMemory(@Body request: FlagMemoryRequest): Response<FlagMemoryResponse>
+
+    @GET("api/users/{userId}/follow-counts")
+    suspend fun getUserFollowCounts(@Path("userId") userId: String): Response<FollowCountsResponse>
 }

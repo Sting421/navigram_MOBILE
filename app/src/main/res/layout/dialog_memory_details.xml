@@ -7,7 +7,7 @@
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
     android:checkable="true"
-    app:cardBackgroundColor="@color/purple_100"
+    app:cardBackgroundColor="@color/white"
     app:cardCornerRadius="12dp"
     app:cardElevation="0dp"
     app:cardForegroundColor="#00FFFFFF"
@@ -137,41 +137,54 @@
             <!-- Comment section -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/comment_input_layout"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:hint="Add a comment"
+                app:boxStrokeColor="@color/black"
+                app:boxStrokeWidth="1dp"
+                app:hintTextColor="@color/charcoal"
                 app:layout_constraintEnd_toStartOf="@+id/send_comment_button"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/memory_date"
-                app:boxStrokeColor="@color/black"
-                app:hintTextColor="@color/charcoal"
-                app:strokeColor="@color/black"
-                app:boxStrokeWidth="1dp"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                app:strokeColor="@color/black">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/comment_input"
-                    android:layout_width="match_parent"
+                    android:layout_width="300dp"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/charcoal"
                     android:inputType="textMultiLine"
-                    android:maxLines="3" />
+                    android:maxLines="3"
+                    android:textColor="@color/charcoal" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
-            <ImageButton
-                android:id="@+id/send_comment_button"
+            <FrameLayout
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:layout_marginStart="8dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Send comment"
-                android:src="@drawable/ic_send"
                 app:layout_constraintBottom_toBottomOf="@+id/comment_input_layout"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/comment_input_layout"
-                app:tint="@color/black" />
+                app:layout_constraintTop_toTopOf="@+id/comment_input_layout">
+
+                <ImageButton
+                    android:id="@+id/send_comment_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Send comment"
+                    android:src="@drawable/ic_send"
+                    app:tint="@color/black" />
+
+                <ProgressBar
+                    android:id="@+id/comment_loading"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:visibility="gone" />
+
+            </FrameLayout>
 
             <androidx.core.widget.NestedScrollView
                 android:id="@+id/comments_scroll_view"
@@ -179,9 +192,9 @@
                 android:layout_height="200dp"
                 android:layout_marginTop="8dp"
                 android:fillViewport="true"
-                app:layout_constraintTop_toBottomOf="@id/comment_input_layout"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+                app:layout_constraintTop_toBottomOf="@id/comment_input_layout">
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/comments_recycler_view"
@@ -198,10 +211,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:orientation="horizontal"
-                app:layout_constraintTop_toBottomOf="@id/comments_scroll_view"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="1.0"
-                app:layout_constraintStart_toStartOf="parent">
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/comments_scroll_view">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/share_button"

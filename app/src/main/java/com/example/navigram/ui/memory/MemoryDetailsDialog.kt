@@ -9,6 +9,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupMenu
+import android.widget.ProgressBar
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
@@ -101,10 +102,18 @@ class MemoryDetailsDialog(
         // Set up comment views
         val commentInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.comment_input)
         val sendCommentButton = view.findViewById<ImageButton>(R.id.send_comment_button)
+        val commentLoading = view.findViewById<ProgressBar>(R.id.comment_loading)
+        val commentLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.comment_input_layout)
 
         sendCommentButton.setOnClickListener {
             val commentText = commentInput.text.toString().trim()
             if (commentText.isNotEmpty()) {
+                // Disable input and show loading
+                sendCommentButton.visibility = View.INVISIBLE
+                commentLoading.visibility = View.VISIBLE
+                commentLayout.isEnabled = false
+                commentInput.isEnabled = false
+
                 lifecycleScope.launch {
                     try {
                         val request = CreateCommentRequest(
@@ -123,6 +132,12 @@ class MemoryDetailsDialog(
                         }
                     } catch (e: Exception) {
                         Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    } finally {
+                        // Re-enable input and hide loading
+                        sendCommentButton.visibility = View.VISIBLE
+                        commentLoading.visibility = View.GONE
+                        commentLayout.isEnabled = true
+                        commentInput.isEnabled = true
                     }
                 }
             }
@@ -449,8 +464,8 @@ class MemoryDetailsDialog(
             try {
                 val response = apiService.getMemoryComments(memory.id)
                 if (response.isSuccessful) {
-                    response.body()?.let { comments ->
-                        commentsAdapter.updateComments(comments)
+                    response.body()?.let { commentsResponse ->
+                        commentsAdapter.updateComments(commentsResponse.data)
                     }
                 } else {
                     Toast.makeText(context, "Failed to load comments", Toast.LENGTH_SHORT).show()

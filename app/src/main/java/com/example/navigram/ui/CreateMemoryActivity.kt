@@ -41,7 +41,7 @@ class CreateMemoryActivity : AppCompatActivity() {
     private lateinit var createButton: Button
     private lateinit var previewImage: ImageView
     private lateinit var mapView: MapView
-    private lateinit var progressBar: ProgressBar
+    private lateinit var loadingLayout: View
     private var currentMarker: Marker? = null
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -94,7 +94,7 @@ class CreateMemoryActivity : AppCompatActivity() {
         createButton = findViewById(R.id.createButton)
         previewImage = findViewById(R.id.previewImage)
         mapView = findViewById(R.id.mapView)
-        progressBar = findViewById(R.id.progressBar)
+        loadingLayout = findViewById(R.id.loadingLayout)
 
         // Set up toolbar
         findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar).apply {
@@ -173,12 +173,23 @@ class CreateMemoryActivity : AppCompatActivity() {
 
     private fun observeViewModel() {
         viewModel.state.observe(this) { state ->
-            progressBar.visibility = if (state.isLoading) View.VISIBLE else View.GONE
+            // Update loading state
+            loadingLayout.visibility = if (state.isLoading) View.VISIBLE else View.GONE
             
+            // Disable all inputs during loading
+            mediaTypeSpinner.isEnabled = !state.isLoading
+            visibilitySpinner.isEnabled = !state.isLoading
+            descriptionInput.isEnabled = !state.isLoading
+            uploadButton.isEnabled = !state.isLoading
+            createButton.isEnabled = !state.isLoading
+            mapView.isClickable = !state.isLoading
+            
+            // Handle error state
             if (state.error != null) {
                 Toast.makeText(this, state.error, Toast.LENGTH_SHORT).show()
             }
             
+            // Handle success state
             if (state.isSuccess) {
                 Toast.makeText(this, "Memory created successfully!", Toast.LENGTH_SHORT).show()
                 finish()
@@ -294,6 +305,15 @@ class CreateMemoryActivity : AppCompatActivity() {
     }
 
     private fun uploadMemory(description: String) {
+        // Disable all inputs immediately
+        mediaTypeSpinner.isEnabled = false
+        visibilitySpinner.isEnabled = false
+        descriptionInput.isEnabled = false
+        uploadButton.isEnabled = false
+        createButton.isEnabled = false
+        mapView.isClickable = false
+        loadingLayout.visibility = View.VISIBLE
+
         viewModel.uploadMemory(description)
         Log.d("MemoryCreation", "Uploading memory with description: $description")
     }

@@ -4,7 +4,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
+import com.google.android.material.imageview.ShapeableImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -19,7 +19,7 @@ class MemoryAdapter(
 ) : RecyclerView.Adapter<MemoryAdapter.MemoryViewHolder>() {
 
     class MemoryViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val image: ImageView = view.findViewById(R.id.memory_image)
+        val image: ShapeableImageView = view.findViewById(R.id.memory_image)
         val description: TextView = view.findViewById(R.id.memory_description)
         val date: TextView = view.findViewById(R.id.memory_date)
     }
@@ -36,24 +36,31 @@ class MemoryAdapter(
         holder.description.text = memory.description
         
         // Format the date
-        val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
-        holder.date.text = memory.createdAt
-
-        // Load image using Glide
-        if (memory.mediaUrl.isNotEmpty()) {
-            Glide.with(holder.image.context)
-                .load(memory.mediaUrl)
-                .centerCrop()
-                .placeholder(R.drawable.navigramlogo)
-                .error(R.drawable.navigramlogo)
-                .into(holder.image)
-        } else {
-            holder.image.setImageResource(R.drawable.navigramlogo)
+        try {
+            val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+            val outputFormat = SimpleDateFormat("MMM dd, yyyy", Locale.US)
+            val date = inputFormat.parse(memory.createdAt.trim())
+            holder.date.text = date?.let { outputFormat.format(it) } ?: memory.createdAt
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing date: ${e.message}")
+            holder.date.text = memory.createdAt
         }
+
+        // Load image using Glide with better error handling
+        Glide.with(holder.image.context)
+            .load(memory.mediaUrl.takeIf { it.isNotEmpty() } ?: R.drawable.navigramlogo)
+            .centerCrop()
+            .placeholder(R.drawable.navigramlogo)
+            .error(R.drawable.navigramlogo)
+            .into(holder.image)
 
         holder.itemView.setOnClickListener {
             onItemClick(memory)
         }
+    }
+
+    companion object {
+        private const val TAG = "MemoryAdapter"
     }
 
     override fun getItemCount() = memories.size

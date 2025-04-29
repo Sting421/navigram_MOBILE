@@ -8,10 +8,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.net.Uri
 import android.widget.ProgressBar
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -25,7 +27,9 @@ class GalleryFragment : Fragment() {
     private lateinit var progressBar: ProgressBar
     private lateinit var adapter: GalleryAdapter
     private val REQUEST_READ_STORAGE = 101
-    val viewModel: GalleryViewModel by viewModels()
+    private val viewModel: GalleryViewModel by viewModels { 
+        GalleryViewModelFactory(requireActivity().application)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -82,20 +86,52 @@ class GalleryFragment : Fragment() {
     }
 
     private fun checkPermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // On Android 10 and above, storage access is different
-            return
-        }
-        
-        if (ContextCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestPermissions(
-                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
-                REQUEST_READ_STORAGE
-            )
+        when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
+                // For Android 13 and above
+                if (ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.READ_MEDIA_IMAGES
+                ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    requestPermissions(
+                        arrayOf(Manifest.permission.READ_MEDIA_IMAGES),
+                        REQUEST_READ_STORAGE
+                    )
+                } else {
+                    viewModel.loadImages()
+                }
+            }
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                // For Android 10-12
+                if (ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    requestPermissions(
+                        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                        REQUEST_READ_STORAGE
+                    )
+                } else {
+                    viewModel.loadImages()
+                }
+            }
+            else -> {
+                // For Android 9 and below
+                if (ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    requestPermissions(
+                        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                        REQUEST_READ_STORAGE
+                    )
+                } else {
+                    viewModel.loadImages()
+                }
+            }
         }
     }
 
@@ -141,7 +177,7 @@ class GalleryFragment : Fragment() {
             
             // Optimized Glide loading with caching and placeholder
             Glide.with(holder.itemView.context)
-                .load(imageItem.file)
+                .load(Uri.parse(imageItem.uri))
                 .apply(
                     RequestOptions()
                         .diskCacheStrategy(DiskCacheStrategy.RESOURCE)

@@ -80,6 +80,7 @@ dependencies {
     implementation(libs.androidx.viewpager2)
     implementation(libs.glide)
     implementation(libs.androidx.fragment.ktx)
+    implementation(libs.circle.imageview)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

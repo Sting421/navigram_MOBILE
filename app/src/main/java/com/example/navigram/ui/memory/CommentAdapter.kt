@@ -6,8 +6,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.navigram.R
 import com.example.navigram.data.api.CommentResponse
+import com.google.android.material.imageview.ShapeableImageView
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -33,6 +35,7 @@ class CommentAdapter : RecyclerView.Adapter<CommentAdapter.CommentViewHolder>() 
     override fun getItemCount(): Int = comments.size
 
     class CommentViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val profileImageView: ShapeableImageView = itemView.findViewById(R.id.imageViewProfile)
         private val usernameTextView: TextView = itemView.findViewById(R.id.textViewUsername)
         private val commentTextView: TextView = itemView.findViewById(R.id.textViewComment)
         private val timestampTextView: TextView = itemView.findViewById(R.id.textViewTimestamp)
@@ -41,12 +44,24 @@ class CommentAdapter : RecyclerView.Adapter<CommentAdapter.CommentViewHolder>() 
             usernameTextView.text = comment.username
             commentTextView.text = comment.content
             timestampTextView.text = formatTimestamp(comment.createdAt)
+            
+            // Load profile picture
+            if (comment.profilePicture != null) {
+                Glide.with(itemView.context)
+                    .load(comment.profilePicture)
+                    .placeholder(R.drawable.profile_placeholder)
+                    .error(R.drawable.profile_placeholder)
+                    .into(profileImageView)
+            } else {
+                profileImageView.setImageResource(R.drawable.navigramlogo)
+            }
+
             Log.d("CommentAdapter", "Binding comment: ${formatTimestamp(comment.createdAt)}")
         }
 
         private fun formatTimestamp(timestamp: String): String {
             try {
-                val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+                val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
                 sdf.timeZone = TimeZone.getTimeZone("UTC")
                 val date = sdf.parse(timestamp)
                 val now = Date()

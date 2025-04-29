@@ -156,11 +156,31 @@ class MapFragment : Fragment() {
     }
 
     private fun showMemoryClusterDialog(memories: List<CreateMemoryResponse>) {
-        val dialog = Dialog(requireContext())
+        val dialog = Dialog(requireContext(), R.style.CustomDialog)
         dialog.setContentView(R.layout.dialog_memory_cluster)
 
-        val recyclerView = dialog.findViewById<RecyclerView>(R.id.memory_list)
-        recyclerView.layoutManager = LinearLayoutManager(context)
+        // Set dialog window attributes for responsive sizing
+        dialog.window?.apply {
+            setLayout(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            
+            // Get screen dimensions
+            val displayMetrics = resources.displayMetrics
+            val maxHeight = (displayMetrics.heightPixels * 0.8).toInt() // 80% of screen height
+            attributes?.apply {
+                height = maxHeight
+            }
+            
+            setBackgroundDrawableResource(android.R.color.transparent)
+        }
+
+        // Setup RecyclerView with fixed max height
+        val recyclerView = dialog.findViewById<RecyclerView>(R.id.memory_list).apply {
+            layoutManager = LinearLayoutManager(context)
+            setHasFixedSize(true)
+        }
         
         // Set up adapter for the recycler view
         val adapter = MemoryAdapter(memories) { memory ->

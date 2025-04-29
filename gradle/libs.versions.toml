@@ -1,4 +1,5 @@
 [versions]
+circle-imageview = "3.1.0"
 okhttp = "4.12.0"
 osmdroid = "6.1.18"
 agp = "8.8.2"
@@ -96,6 +97,9 @@ cloudinary-android = { module = "com.cloudinary:cloudinary-android", version.ref
 
 # Google Sign In
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "googleAuth" }
+
+# Circle ImageView
+circle-imageview = { module = "de.hdodenhof:circleimageview", version.ref = "circle-imageview" }
 
 # Compose libraries
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "compose_version" }

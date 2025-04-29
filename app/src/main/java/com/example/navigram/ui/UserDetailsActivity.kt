@@ -58,14 +58,19 @@ class UserDetailsActivity : AppCompatActivity() {
     }
 
     private fun loadUserDetails(userId: String) {
+        loadUserProfile(userId)
+        loadFollowCounts(userId)
+    }
+
+    private fun loadUserProfile(userId: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val response = apiService.getPublicUserProfile(userId)
                 
-                if (response.isSuccessful) {
-                    val user = response.body()
-                    user?.let { userResponse ->
-                        runOnUiThread {
+                runOnUiThread {
+                    if (response.isSuccessful) {
+                        val user = response.body()
+                        user?.let { userResponse ->
                             // Update UI with user details
                             userNameTextView.text = userResponse.name ?: userResponse.username
                             userUsernameTextView.text = "@${userResponse.username}"
@@ -77,15 +82,11 @@ class UserDetailsActivity : AppCompatActivity() {
                                     .placeholder(R.drawable.profile_placeholder)
                                     .into(profileImageView)
                             }
-
-
                         }
-                    }
-                } else {
-                    runOnUiThread {
+                    } else {
                         Toast.makeText(
                             this@UserDetailsActivity,
-                            "Failed to load user details",
+                            "Failed to load user profile",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -95,7 +96,7 @@ class UserDetailsActivity : AppCompatActivity() {
                 runOnUiThread {
                     Toast.makeText(
                         this@UserDetailsActivity,
-                        "Error loading user details",
+                        "Error loading user profile",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -103,6 +104,38 @@ class UserDetailsActivity : AppCompatActivity() {
         }
     }
 
+    private fun loadFollowCounts(userId: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val response = apiService.getUserFollowCounts(userId)
+                
+                runOnUiThread {
+                    if (response.isSuccessful) {
+                        val counts = response.body()?.data
+                        counts?.let {
+                            followersCountTextView.text = it.followers.toString()
+                            followingCountTextView.text = it.following.toString()
+                        }
+                    } else {
+                        Toast.makeText(
+                            this@UserDetailsActivity,
+                            "Failed to load follow counts",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                runOnUiThread {
+                    Toast.makeText(
+                        this@UserDetailsActivity,
+                        "Error loading follow counts",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
     private fun followUser(context: Context, userId: String) {
         followButton.isEnabled = false // Disable button while request is in progress
 
