@@ -24,7 +24,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
                 android:adjustViewBounds="true"
-                android:src="@drawable/navigramlogo" />
+                android:src="@drawable/black" />
 
         </androidx.appcompat.widget.Toolbar>
 

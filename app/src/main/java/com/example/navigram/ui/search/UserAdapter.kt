@@ -3,6 +3,7 @@ package com.example.navigram.ui.search
 import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
+import com.bumptech.glide.Glide
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
@@ -31,6 +32,14 @@ class UserAdapter(
         val user = users[position]
         holder.userName.text = user.username
         holder.userEmail.text = user.email
+        val imageUrl = user.profileImageUrl ?: R.drawable.navigramlogo
+        // Load profile image using Glide
+        Glide.with(holder.itemView.context)
+            .load(imageUrl)
+            .placeholder(R.drawable.navigramlogo)
+            .error(R.drawable.profile_placeholder)
+            .circleCrop()
+            .into(holder.userProfileImage)
 
         holder.itemView.setOnClickListener {
             onUserClick(user)

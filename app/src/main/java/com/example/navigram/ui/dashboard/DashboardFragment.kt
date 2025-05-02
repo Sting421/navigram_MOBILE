@@ -6,12 +6,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.navigram.NavigramApplication
 import com.example.navigram.R
 import com.example.navigram.databinding.FragmentDashboardBinding
 import com.example.navigram.data.model.Story
 import com.example.navigram.data.model.FeedPost
 import com.example.navigram.ui.CreateMemoryActivity
+import com.example.navigram.ui.UserDetailsActivity
 import com.google.android.material.snackbar.Snackbar
 
 class DashboardFragment : Fragment() {
@@ -31,25 +34,33 @@ class DashboardFragment : Fragment() {
         return binding.root
     }
 
+    private lateinit var viewModel: DashboardViewModel
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        setupViewModel()
         setupStoryRecyclerView()
         setupFeedRecyclerView()
         setupAddPostButton()
+        observeViewModel()
+        
+        viewModel.loadFeed() // Load feed posts
+    }
+
+    private fun setupViewModel() {
+        val factory = DashboardViewModelFactory((requireActivity().application as NavigramApplication).apiService)
+        viewModel = ViewModelProvider(this, factory)[DashboardViewModel::class.java]
+        viewModel.loadStories()
     }
 
     private fun setupStoryRecyclerView() {
-        // TODO: Replace with actual data from backend
-        val stories = listOf(
-            Story("1", "user1", "", System.currentTimeMillis()),
-            Story("2", "user2", "", System.currentTimeMillis()),
-            Story("3", "user3", "", System.currentTimeMillis())
-        )
-
-        storyAdapter = StoryAdapter(stories) { story ->
-            // TODO: Handle story click
-            Snackbar.make(binding.root, "Story clicked: ${story.username}", Snackbar.LENGTH_SHORT).show()
+        storyAdapter = StoryAdapter(emptyList()) { story ->
+            // Launch UserDetailsActivity when story is clicked
+            val intent = Intent(requireContext(), UserDetailsActivity::class.java).apply {
+                putExtra("user_id", story.id)
+            }
+            startActivity(intent)
         }
 
         binding.storiesRecyclerView.apply {
@@ -59,22 +70,8 @@ class DashboardFragment : Fragment() {
     }
 
     private fun setupFeedRecyclerView() {
-        // TODO: Replace with actual data from backend
-        val posts = listOf(
-            FeedPost(
-                "1", "user1", "John Doe", "",
-                "", "Beautiful sunset! 🌅", 
-                42, 5, System.currentTimeMillis()
-            ),
-            FeedPost(
-                "2", "user2", "Jane Smith", "",
-                "", "Having a great time! 😊",
-                78, 12, System.currentTimeMillis()
-            )
-        )
-
         feedAdapter = FeedAdapter(
-            posts,
+            emptyList(),
             onLikeClick = { post ->
                 // TODO: Implement like functionality
                 Snackbar.make(binding.root, "Liked post", Snackbar.LENGTH_SHORT).show()
@@ -100,6 +97,22 @@ class DashboardFragment : Fragment() {
         binding.feedRecyclerView.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = feedAdapter
+        }
+    }
+
+    private fun observeViewModel() {
+        viewModel.stories.observe(viewLifecycleOwner) { stories ->
+            storyAdapter.updateStories(stories)
+        }
+
+        viewModel.feed.observe(viewLifecycleOwner) { posts ->
+            feedAdapter.updatePosts(posts)
+        }
+
+        viewModel.error.observe(viewLifecycleOwner) { error ->
+            error?.let {
+                Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show()
+            }
         }
     }
 

@@ -25,9 +25,12 @@ class SearchViewModel(private val apiService: ApiService) : ViewModel() {
                 _isLoading.value = true
                 _error.value = null
 
+                val response2 = apiService.getAllFollowing()
+
+                Log.d("Following", "Raw Response Following: ${response2.body()}")
                 val response = apiService.getAllUsers()
 
-                Log.d("SearchViewModel", "Raw Response: ${response.body()}") // Log raw response
+                Log.d("SearchViewModel", "Raw Response: ${response}") // Log raw response
                 if (response.isSuccessful) {
                     val allUsers = response.body() ?: emptyList()
                     Log.d("SearchViewModel", "All Users Size: ${allUsers.size}") // Log allUsers size

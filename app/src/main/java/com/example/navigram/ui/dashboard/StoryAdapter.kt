@@ -10,7 +10,7 @@ import com.example.navigram.R
 import com.example.navigram.data.model.Story
 
 class StoryAdapter(
-    private val stories: List<Story>,
+    private var stories: List<Story>,
     private val onStoryClick: (Story) -> Unit
 ) : RecyclerView.Adapter<StoryAdapter.StoryViewHolder>() {
 
@@ -29,13 +29,13 @@ class StoryAdapter(
         val story = stories[position]
         holder.storyUsername.text = story.username
 
-        // TODO: Load story image using Glide or similar library
-        // Glide.with(holder.itemView.context)
-        //     .load(story.imageUrl)
-        //     .circleCrop()
-        //     .into(holder.storyImage)
-
-        //test
+        // Load story image using Glide
+        com.bumptech.glide.Glide.with(holder.itemView.context)
+            .load(story.imageUrl)
+            .placeholder(R.drawable.profile_placeholder)
+            .error(R.drawable.navigramlogo)
+            .circleCrop()
+            .into(holder.storyImage)
 
         holder.itemView.setOnClickListener {
             onStoryClick(story)
@@ -43,4 +43,9 @@ class StoryAdapter(
     }
 
     override fun getItemCount() = stories.size
+
+    fun updateStories(newStories: List<Story>) {
+        stories = newStories
+        notifyDataSetChanged()
+    }
 }
