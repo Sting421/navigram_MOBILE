@@ -35,6 +35,8 @@ class StoryAdapter(
         //     .circleCrop()
         //     .into(holder.storyImage)
 
+        //test
+
         holder.itemView.setOnClickListener {
             onStoryClick(story)
         }

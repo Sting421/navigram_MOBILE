@@ -22,3 +22,14 @@
 -keep class androidx.camera.view.PreviewView {
     public *;
 }
+
+# Keep CameraX core classes
+-keep class androidx.camera.core.** { *; }
+-keep class androidx.camera.camera2.** { *; }
+-keep class androidx.camera.lifecycle.** { *; }
+-keep class androidx.camera.view.** { *; }
+
+# Keep specific classes used by CameraX if needed (add more as required by your specific implementation)
+-keep class androidx.core.content.ContextCompat { *; }
+-keep class androidx.lifecycle.LifecycleOwner { *; }
+-keep class com.google.common.util.concurrent.ListenableFuture { *; }
