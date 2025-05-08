@@ -1,0 +1,6 @@
+package com.example.navigram.data.api
+
+data class LoginRequest(
+    val username: String,
+    val password: String
+)

@@ -1,6 +1,8 @@
 package com.example.navigram.data.api
 
 import okhttp3.Interceptor
+import com.example.navigram.data.api.LoginRequest
+import com.example.navigram.data.api.SignUpResponse
 import okhttp3.OkHttpClient
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -142,7 +144,25 @@ data class FollowCounts(
     val following: Int
 )
 
+data class LoginResponse(
+    val token: String,
+    val username: String,
+    val status: Int
+)
+
 interface ApiService {
+    @POST("api/auth/login")
+    suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
+
+    @POST("api/auth/register")
+    suspend fun register(@Body request: SignUpRequest): Response<SignUpResponse>
+
+    @POST("api/guest/auth/register")
+    suspend fun registerGuest(): Response<SignUpResponse>
+
+    @POST("api/guest/auth/login")
+    suspend fun loginAsGuest(@Body request: LoginRequest): Response<LoginResponse>
+
     @PUT("api/memories/{id}")
     suspend fun updateMemory(
         @Path("id") memoryId: String,

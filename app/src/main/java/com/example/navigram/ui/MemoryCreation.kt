@@ -34,6 +34,7 @@ import org.osmdroid.views.MapView
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.config.Configuration
 import org.osmdroid.views.overlay.Marker
+import android.os.Build
 
 class MemoryCreationActivity : AppCompatActivity() {
     
@@ -254,6 +255,62 @@ class MemoryCreationActivity : AppCompatActivity() {
         }
     }
     private fun showImagePicker() {
+        // First check if we have storage permission
+        when {
+            ContextCompat.checkSelfPermission(
+                this,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    Manifest.permission.READ_MEDIA_IMAGES
+                } else {
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                }
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                // Permission is granted, show the dialog
+                showImagePickerDialog()
+            }
+            shouldShowRequestPermissionRationale(
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    Manifest.permission.READ_MEDIA_IMAGES
+                } else {
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                }
+            ) -> {
+                // Show explanation dialog
+                Toast.makeText(
+                    this,
+                    "Storage permission is required to access your images",
+                    Toast.LENGTH_LONG
+                ).show()
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            Manifest.permission.READ_MEDIA_IMAGES
+                        } else {
+                            Manifest.permission.READ_EXTERNAL_STORAGE
+                        }
+                    ),
+                    STORAGE_PERMISSION_REQUEST_CODE
+                )
+            }
+            else -> {
+                // Request the permission
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            Manifest.permission.READ_MEDIA_IMAGES
+                        } else {
+                            Manifest.permission.READ_EXTERNAL_STORAGE
+                        }
+                    ),
+                    STORAGE_PERMISSION_REQUEST_CODE
+                )
+            }
+        }
+    }
+
+    private fun showImagePickerDialog() {
         val imagePickerDialog = ImagePickerDialog().apply {
             setOnImageSelectedListener { url ->
                 viewModel.setMediaUrl(url)
@@ -265,6 +322,30 @@ class MemoryCreationActivity : AppCompatActivity() {
             }
         }
         imagePickerDialog.show(supportFragmentManager, "imagePicker")
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            STORAGE_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Permission granted
+                    showImagePickerDialog()
+                } else {
+                    // Permission denied
+                    Toast.makeText(
+                        this,
+                        "Storage permission is required to access your images",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+            // Handle other permission requests as needed
+        }
     }
 
     private fun validateForm(): Boolean {
@@ -303,5 +384,9 @@ class MemoryCreationActivity : AppCompatActivity() {
     private fun uploadMemory(description: String) {
         viewModel.uploadMemory(description)
         Log.d("MemoryCreation", "Uploading memory with description: ${descriptionInput.text}")
+    }
+
+    companion object {
+        private const val STORAGE_PERMISSION_REQUEST_CODE = 100
     }
 }

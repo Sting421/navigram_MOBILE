@@ -187,7 +187,20 @@ class MemoryDetailsDialog(
         }
 
         shareButton.setOnClickListener {
-            // TODO: Implement share functionality
+            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(android.content.Intent.EXTRA_SUBJECT, "Check out this memory!")
+                putExtra(android.content.Intent.EXTRA_TEXT, 
+                    """
+                    Check out this memory from ${memory.username}!
+                    
+                    ${memory.description}
+                    
+                    View it on Navigram: navigram://memories/${memory.id}
+                    """.trimIndent()
+                )
+            }
+            context.startActivity(android.content.Intent.createChooser(shareIntent, "Share memory via"))
         }
     }
 
@@ -199,7 +212,7 @@ class MemoryDetailsDialog(
                     val request = Request.Builder()
                         .url("https://address-from-to-latitude-longitude.p.rapidapi.com/geolocationapi?lat=${memory.latitude}&lng=${memory.longitude}")
                         .get()
-                        .addHeader("x-rapidapi-key", "fc33d176bdmsh77abb4787653b11p100a6cjsn63a64fd53e22")
+                        .addHeader("x-rapidapi-key", System.getenv("RAPIDAPI_KEY") ?: "")
                         .addHeader("x-rapidapi-host", "address-from-to-latitude-longitude.p.rapidapi.com")
                         .build()
 
@@ -254,12 +267,42 @@ class MemoryDetailsDialog(
                 .into(memoryImage)
         }
 
-        Glide.with(context)
-            .load(R.drawable.navigramlogo)
-            .centerCrop()
-            .placeholder(R.drawable.navigramlogo)
-            .error(R.drawable.navigramlogo)
-            .into(profileImage)
+        // Load user profile image
+        lifecycleScope.launch {
+            try {
+                val userResponse = apiService.getPublicUserProfile(memory.userId)
+                if (userResponse.isSuccessful) {
+                    val user = userResponse.body()
+                    user?.profilePicture?.let { imageUrl ->
+                        Glide.with(context)
+                            .load(imageUrl)
+                            .centerCrop()
+                            .placeholder(R.drawable.profile_placeholder)
+                            .error(R.drawable.profile_placeholder)
+                            .into(profileImage)
+                    } ?: run {
+                        // If no profile image URL, load placeholder
+                        Glide.with(context)
+                            .load(R.drawable.profile_placeholder)
+                            .centerCrop()
+                            .into(profileImage)
+                    }
+                } else {
+                    // Load placeholder on error response
+                    Glide.with(context)
+                        .load(R.drawable.profile_placeholder)
+                        .centerCrop()
+                        .into(profileImage)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading profile image: ${e.message}")
+                // Load placeholder on error
+                Glide.with(context)
+                    .load(R.drawable.profile_placeholder)
+                    .centerCrop()
+                    .into(profileImage)
+            }
+        }
     }
 
     private fun showOptionsMenu(view: View) {

@@ -27,16 +27,15 @@ import com.example.navigram.ui.SignUp
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import kotlinx.coroutines.*
-import java.net.HttpURLConnection
-import java.net.URL
-import org.json.JSONObject
-import java.io.OutputStreamWriter
+import retrofit2.Response
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.example.navigram.ui.CameraCapture
-import com.example.navigram.ui.SignUpResponse
+import com.example.navigram.data.api.SignUpResponse
 import java.io.IOException
 import java.net.MalformedURLException
 import java.net.SocketTimeoutException
@@ -48,17 +47,15 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import com.example.navigram.data.api.ApiService
 import com.example.navigram.data.api.Auth0TokenRequest
+import com.example.navigram.data.api.LoginRequest
 
-data class LoginResponse(
-    val token: String,
-    val username:String,
-    val status: Int
-)
+import com.example.navigram.data.api.LoginResponse
+import org.json.JSONObject
+
 // Load environment variables
 /*
 val dotenv = dotenv()  // This will load the environment variables from the .env file
 val baseUrl = dotenv["BASE_URL"]  // Retrieve the BASE_URL environment variable
-
 */
 
 
@@ -268,112 +265,107 @@ class LoginActivity : AppCompatActivity() {
     }
 
 
-    // Moved function outside onCreate()
     private suspend fun loginToNetwork(context: Context, username: String, password: String): String {
         return withContext(Dispatchers.IO) {
-            try {
-                val baseUrl = context.getString(R.string.BaseURL) // Ensure it's accessed safely
-                val url = URL("$baseUrl/api/auth/login")
+            val maxRetries = 3
+            var currentAttempt = 0
+            var delayMs = 1000L // Initial delay of 1 second
 
-                (url.openConnection() as HttpURLConnection).run {
-                    requestMethod = "POST"
-                    connectTimeout = 10000 // Increase timeout to avoid premature failures
-                    readTimeout = 10000
-                    setRequestProperty("Content-Type", "application/json")
-                    doOutput = true
+            while (currentAttempt < maxRetries) {
+                try {
+                    val retrofit = Retrofit.Builder()
+                        .baseUrl(context.getString(R.string.BaseURL))
+                        .addConverterFactory(GsonConverterFactory.create())
+                        .build()
 
-                    val jsonPayload = JSONObject().apply {
-                        put("username", username)
-                        put("password", password)
-                    }
+                    val apiService = retrofit.create(ApiService::class.java)
+                    val loginRequest = LoginRequest(username, password)
 
-                    try {
-                        outputStream.use { os ->
-                            OutputStreamWriter(os).use { writer ->
-                                writer.write(jsonPayload.toString())
-                                writer.flush()
+                    val response = apiService.login(loginRequest)
+
+                    return@withContext when {
+                        response.isSuccessful -> {
+                            val loginResponse = response.body()
+                            if (loginResponse != null) {
+                                // Convert the response to JSON string to maintain compatibility
+                                Gson().toJson(loginResponse)
+                            } else {
+                                "Error: Empty response from server"
                             }
                         }
-
-                        val response = inputStream.bufferedReader().use { it.readText() }
-                        println("HTTP Response Code: $responseCode")
-                        println("API Response: $response")
-
-                        return@run if (responseCode == HttpURLConnection.HTTP_OK) {
-                            response
-                        } else if (responseCode == 429) {
-                            val jsonResponse = JSONObject(response)
-                            val errorMessage = jsonResponse.optString("message", "Unknown error")
-                            "Error: $errorMessage"
-                        } else {
-                            "Error: $responseCode - $response"
+                        response.code() == 429 -> {
+                            if (currentAttempt == maxRetries - 1) {
+                                "Error: Too many requests. Please try again later."
+                            } else {
+                                // Retry for 429 errors
+                                delay(delayMs)
+                                currentAttempt++
+                                delayMs *= 2 // Exponential backoff
+                                continue
+                            }
                         }
-                    } catch (e: IOException) {
-                        e.printStackTrace()
-                        return@run "Network error: ${e.localizedMessage}"
-                    } finally {
-                        disconnect()
+                        response.code() == 500 -> {
+                            "Invalid Credentials, User not Found!"
+                        }
+                        else -> {
+                            val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                            "Error: ${response.code()} - $errorBody"
+                        }
+                    }
+                } catch (e: Exception) {
+                    if (currentAttempt == maxRetries - 1) {
+                        return@withContext when (e) {
+                            is IOException -> "Network error: Please check your internet connection"
+                            else -> "Unexpected error: ${e.localizedMessage}"
+                        }
+                    } else {
+                        delay(delayMs)
+                        currentAttempt++
+                        delayMs *= 2 // Exponential backoff
+                        continue
                     }
                 }
-            } catch (e: MalformedURLException) {
-                e.printStackTrace()
-                return@withContext "Invalid URL"
-            } catch (e: SocketTimeoutException) {
-                e.printStackTrace()
-                return@withContext "Network timeout. Please try again."
-            } catch (e: Exception) {
-                e.printStackTrace()
-                return@withContext "Unexpected error: ${e.localizedMessage}"
             }
+            "Error: Max retry attempts reached"
         }
     }
 
 
     private suspend fun loginToNetworkAsGuest(username: String, password: String): String {
         return withContext(Dispatchers.IO) {
-            val url = URL("${getString(R.string.BaseURL)}/api/guest/auth/login")
-            (url.openConnection() as HttpURLConnection).run {
-                requestMethod = "POST"
-                connectTimeout = 100000
-                readTimeout = 100000
-                setRequestProperty("Content-Type", "application/json")
-                doOutput = true // Enable output for request body
+            try {
+                val retrofit = Retrofit.Builder()
+                    .baseUrl(getString(R.string.BaseURL))
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
 
-                // Create JSON payload
-                val jsonPayload = JSONObject().apply {
-                    put("username", username)
-                    put("password", password)
-                }
-
-                // Write JSON payload to request body
-                try {
-                    OutputStreamWriter(outputStream).use { writer ->
-                        writer.write(jsonPayload.toString())
-                        writer.flush()
+                val apiService = retrofit.create(ApiService::class.java)
+                val loginRequest = LoginRequest(username, password)
+                val response = apiService.loginAsGuest(loginRequest)
+                
+                when {
+                    response.isSuccessful -> {
+                        val loginResponse = response.body()
+                        if (loginResponse != null) {
+                            Gson().toJson(loginResponse)
+                        } else {
+                            "Error: Empty response from server"
+                        }
+                    }
+                    response.code() == 429 -> {
+                        "Error: Too many requests. Please try again later."
                     }
 
-                    val response = inputStream.bufferedReader().use { it.readText() }
-                    println("HTTP Response Code: $responseCode") // Debugging
-                    println("API Response: $response") // Debugging
-
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
-                        response
-                    } else if (responseCode == 429) {
-                        // Parse the JSON response to extract the message
-                        val jsonResponse = JSONObject(response)
-                        val errorMessage = jsonResponse.optString("message", "Unknown error")
-                        println("Error 500: $errorMessage")
-                        "Error: $errorMessage"
-                    } else {
-                        "Error: $responseCode - $response"
+                    else -> {
+                        val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                        "Error: ${response.code()} - $errorBody"
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    "Failed to fetch data"
-                } finally {
-                    disconnect()
                 }
-
+            } catch (e: Exception) {
+                when (e) {
+                    is IOException -> "Network error: Please check your internet connection"
+                    else -> "Unexpected error: ${e.localizedMessage}"
+                }
             }
         }
     }
@@ -561,35 +553,36 @@ class LoginActivity : AppCompatActivity() {
     }
     private suspend fun registerToNetworkAsGuest(context: Context): String {
         return withContext(Dispatchers.IO) {
-            val baseUrl = context.getString(R.string.BaseURL) // Retrieve base URL before the coroutine
-            val url = URL("$baseUrl/api/guest/auth/register")
+            try {
+                val retrofit = Retrofit.Builder()
+                    .baseUrl(context.getString(R.string.BaseURL))
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
 
-            (url.openConnection() as HttpURLConnection).run {
-                requestMethod = "POST"
-                connectTimeout = 10000
-                readTimeout = 10000
-                setRequestProperty("Content-Type", "application/json")
-                doOutput = true // Enable output for POST request, even if no body is sent
-
-                try {
-                    val response = inputStream.bufferedReader().use { it.readText() }
-                    println("HTTP Response Code: $responseCode") // Debugging
-                    println("API Response: $response") // Debugging
-
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
-                        println("NetworkGuest created: $response") // Use Log.d for debugging in Android
-                        response
-                    } else {
-                        "Error: $responseCode - $response"
+                val apiService = retrofit.create(ApiService::class.java)
+                val response = apiService.registerGuest()
+                
+                when {
+                    response.isSuccessful -> {
+                        val guestResponse = response.body()
+                        if (guestResponse != null) {
+                            Gson().toJson(guestResponse)
+                        } else {
+                            "Error: Empty response from server"
+                        }
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    if(responseCode == 500)
-                        "User already exist"
-                    else
-                        "Failed to fetch Data"
-                } finally {
-                    disconnect()
+                    response.code() == 500 -> {
+                        "User already exists"
+                    }
+                    else -> {
+                        val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                        "Error: ${response.code()} - $errorBody"
+                    }
+                }
+            } catch (e: Exception) {
+                when (e) {
+                    is IOException -> "Network error: Please check your internet connection"
+                    else -> "Unexpected error: ${e.localizedMessage}"
                 }
             }
         }

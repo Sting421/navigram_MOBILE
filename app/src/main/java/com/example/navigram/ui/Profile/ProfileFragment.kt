@@ -1,15 +1,21 @@
 package com.example.navigram.ui.Profile
 
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.Manifest
 import android.app.Dialog
 import android.content.Context
 import android.content.Intent
-import androidx.activity.result.contract.ActivityResultContracts
-
+import android.content.pm.PackageManager
+import android.location.Location
+import android.os.Bundle
 import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.View.GONE
+import android.view.View.VISIBLE
+import android.view.ViewGroup
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
@@ -23,6 +29,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.navigram.R
@@ -31,14 +38,27 @@ import com.example.navigram.ui.Profile.UserData
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.pow
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 class ProfileFragment : Fragment() {
     private val client = OkHttpClient()
+    private val inputFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+    private val outputFormat = DateTimeFormatter.ofPattern("MMMM d, yyyy")
     private val viewModel: ProfileViewModel by viewModels {
         ProfileViewModelFactory(requireContext())
+    }
+
+    companion object {
+        private const val LOCATION_PERMISSION_REQUEST = 1
+        private const val ZOOM_LEVEL = 7.0
+        private const val CLUSTER_DISTANCE_THRESHOLD = 0.05 // Base threshold in kilometers
+        private const val LOCATION_ZOOM = 10.0
+        private const val TAG = "ProfileFragment"
     }
 
     // UI Elements
@@ -48,6 +68,12 @@ class ProfileFragment : Fragment() {
     private lateinit var editProfileButton: Button
     private lateinit var logoutButton: Button
     private lateinit var postsRecyclerView: RecyclerView
+    private lateinit var viewToggleGroup: com.google.android.material.button.MaterialButtonToggleGroup
+
+    // Map related properties
+    private lateinit var map: org.osmdroid.views.MapView
+    private lateinit var myLocationOverlay: org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+    private var locationPermissionGranted = false
 
     // Memory Adapter
     private lateinit var memoryAdapter: MemoryAdapter
@@ -71,6 +97,20 @@ class ProfileFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         val view = inflater.inflate(R.layout.activity_profile, container, false)
+        
+        // Initialize map first since other views depend on it
+        initializeMap(view)
+        setupViews(view)
+        
+        return view
+    }
+
+    private fun setupViews(view: View) {
+        // Map must be initialized before setting up views
+        if (!::map.isInitialized) {
+            Log.e(TAG, "Map not initialized before setting up views")
+            return
+        }
 
         // Initialize UI elements
         profileImage = view.findViewById(R.id.profile_image)
@@ -79,6 +119,27 @@ class ProfileFragment : Fragment() {
         editProfileButton = view.findViewById(R.id.edit_profile_button)
         logoutButton = view.findViewById(R.id.logout_button)
         postsRecyclerView = view.findViewById(R.id.profile_posts_recycler_view)
+        viewToggleGroup = view.findViewById(R.id.view_toggle_group)
+
+        // Setup toggle group
+        viewToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                when (checkedId) {
+                    R.id.grid_view_button -> {
+                        postsRecyclerView.visibility = VISIBLE
+                        map.visibility = GONE
+                    }
+                    R.id.map_view_button -> {
+                        postsRecyclerView.visibility = GONE
+                        map.visibility = VISIBLE
+                        updateMapMarkers()
+                    }
+                }
+            }
+        }
+
+        // Select grid view by default
+        viewToggleGroup.check(R.id.grid_view_button)
 
         // Setup RecyclerView with MemoryAdapter using fully qualified type
         memoryAdapter = MemoryAdapter(memories) { memory: com.example.navigram.data.api.CreateMemoryResponse ->
@@ -86,8 +147,88 @@ class ProfileFragment : Fragment() {
         }
         postsRecyclerView.layoutManager = GridLayoutManager(context, 3)
         postsRecyclerView.adapter = memoryAdapter
+    }
 
-        return view
+    private fun initializeMap(view: View) {
+        // Initialize OSMDroid configuration
+        org.osmdroid.config.Configuration.getInstance().userAgentValue = requireContext().packageName
+        
+        map = view.findViewById(R.id.profile_map_view)
+        map.setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK)
+        map.setMultiTouchControls(true)
+        
+        // Setup location overlay
+        myLocationOverlay = org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay(
+            org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider(context), 
+            map
+        )
+        myLocationOverlay.enableMyLocation()
+        map.overlays.add(myLocationOverlay)
+
+        // Set initial map position and zoom
+        map.controller.setZoom(ZOOM_LEVEL)
+        map.controller.setCenter(org.osmdroid.util.GeoPoint(14.5995, 120.9842)) // Default to Manila, Philippines
+    }
+
+    private fun updateMapMarkers() {
+        // Clear existing markers
+        map.overlays.removeAll { it is org.osmdroid.views.overlay.Marker }
+        map.overlays.add(myLocationOverlay) // Add back location overlay
+
+        memories.forEach { memory ->
+            val marker = org.osmdroid.views.overlay.Marker(map).apply {
+                position = org.osmdroid.util.GeoPoint(memory.latitude, memory.longitude)
+                title = memory.description
+                val date = LocalDateTime.parse(memory.createdAt, inputFormat).toLocalDate()
+                snippet = outputFormat.format(date)
+                icon = requireContext().resources.getDrawable(R.drawable.mappin2, null)
+                setAnchor(org.osmdroid.views.overlay.Marker.ANCHOR_CENTER, org.osmdroid.views.overlay.Marker.ANCHOR_BOTTOM)
+                setOnMarkerClickListener { marker, _ ->
+                    handleMarkerClick(marker, memories)
+                    true
+                }
+            }
+            map.overlays.add(marker)
+        }
+        map.invalidate()
+    }
+
+    private fun handleMarkerClick(clickedMarker: org.osmdroid.views.overlay.Marker, memories: List<com.example.navigram.data.api.CreateMemoryResponse>) {
+        val clickedMemory = memories.find { 
+            org.osmdroid.util.GeoPoint(it.latitude, it.longitude) == clickedMarker.position 
+        } ?: return
+
+        // Calculate zoom-based threshold
+        val currentZoom = map.zoomLevelDouble
+        val baseThreshold = CLUSTER_DISTANCE_THRESHOLD
+        val zoomFactor = 0.5.pow((currentZoom - 15).toDouble())
+        val proximityThreshold = baseThreshold * zoomFactor
+
+        // Find nearby memories
+        val closeMemories = memories.filter { memory ->
+            val distance = calculateDistance(
+                clickedMemory.latitude, clickedMemory.longitude,
+                memory.latitude, memory.longitude
+            )
+            distance <= proximityThreshold
+        }
+
+        if (closeMemories.size > 1) {
+            showMemoryClusterDialog(closeMemories)
+        } else {
+            showMemoryDetailsDialog(clickedMemory)
+        }
+    }
+
+    private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val R = 6371.0 // Earth's radius in km
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                Math.sin(dLon/2) * Math.sin(dLon/2)
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+        return R * c
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -129,8 +270,12 @@ class ProfileFragment : Fragment() {
                 }
 
                 launch {
-                    viewModel.memories.collect { memories ->
-                        memoryAdapter.updateMemories(memories)
+                    viewModel.memories.collect { newMemories ->
+                        memories = newMemories // Update main memories list
+                        memoryAdapter.updateMemories(newMemories)
+                        if (map.visibility == VISIBLE) {
+                            updateMapMarkers()
+                        }
                     }
                 }
 
@@ -219,7 +364,8 @@ class ProfileFragment : Fragment() {
             .into(memoryImage)
 
         memoryDescription.text = memory.description
-        memoryDate.text = memory.createdAt
+        val date = LocalDateTime.parse(memory.createdAt.trim(), inputFormat).toLocalDate()
+        memoryDate.text = outputFormat.format(date)
 
         // Get location data
         val memoryLocation = dialog.findViewById<TextView>(R.id.memory_location)
@@ -264,7 +410,50 @@ class ProfileFragment : Fragment() {
         dialog.show()
     }
 
-    companion object {
-        private const val TAG = "ProfileFragment"
+    private fun showMemoryClusterDialog(memories: List<com.example.navigram.data.api.CreateMemoryResponse>) {
+        val dialog = Dialog(requireContext(), R.style.CustomDialog)
+        dialog.setContentView(R.layout.dialog_memory_cluster)
+
+        dialog.window?.apply {
+            setLayout(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            
+            val displayMetrics = resources.displayMetrics
+            val maxHeight = (displayMetrics.heightPixels * 0.8).toInt()
+            attributes?.apply {
+                height = maxHeight
+            }
+            
+            setBackgroundDrawableResource(android.R.color.transparent)
+        }
+
+        val recyclerView = dialog.findViewById<RecyclerView>(R.id.memory_list).apply {
+            layoutManager = LinearLayoutManager(context)
+            setHasFixedSize(true)
+        }
+        
+        val adapter = com.example.navigram.ui.map.MemoryAdapter(memories) { memory ->
+            dialog.dismiss()
+            showMemoryDetailsDialog(memory)
+        }
+        recyclerView.adapter = adapter
+
+        dialog.findViewById<Button>(R.id.close_button).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        map.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        map.onPause()
     }
 }

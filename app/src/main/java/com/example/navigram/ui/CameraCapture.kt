@@ -127,7 +127,7 @@ class CameraCapture : AppCompatActivity() {
 
     private fun takePhoto() {
         // Get the DCIM directory path (consider using MediaStore for API 29+)
-        val dcimDirectory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "Navigram")
+        val dcimDirectory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "Camera")
 
         // Create the directory if it doesn't exist
         if (!dcimDirectory.exists()) {

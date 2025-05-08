@@ -14,11 +14,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.ProgressBar
+import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
@@ -32,8 +34,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.util.Log
 
 class ImagePickerDialog : DialogFragment() {
+    private val TAG = "ImagePickerDialog"
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setStyle(DialogFragment.STYLE_NORMAL, R.style.CustomDialog)
@@ -61,6 +66,8 @@ class ImagePickerDialog : DialogFragment() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var progressBar: ProgressBar
+    private lateinit var swipeRefreshLayout: SwipeRefreshLayout
+    private lateinit var noImagesText: TextView
     private lateinit var adapter: ImageAdapter
     private lateinit var viewModel: GalleryViewModel
     private var onImageSelected: ((String) -> Unit)? = null
@@ -78,6 +85,8 @@ class ImagePickerDialog : DialogFragment() {
 
         recyclerView = view.findViewById(R.id.recyclerView)
         progressBar = view.findViewById(R.id.progressBar)
+        swipeRefreshLayout = view.findViewById(R.id.swipeRefreshLayout)
+        noImagesText = view.findViewById(R.id.noImagesText)
         
         view.findViewById<View>(R.id.closeButton).setOnClickListener {
             dismiss()
@@ -86,6 +95,7 @@ class ImagePickerDialog : DialogFragment() {
         try {
             viewModel = ViewModelProvider(this, GalleryViewModelFactory(requireActivity().application))[GalleryViewModel::class.java]
             setupRecyclerView()
+            setupSwipeRefresh()
             observeViewModel()
             checkPermissionAndLoadImages()
         } catch (e: Exception) {
@@ -94,8 +104,19 @@ class ImagePickerDialog : DialogFragment() {
             dismiss()
         }
     }
+    
+    private fun setupSwipeRefresh() {
+        swipeRefreshLayout.setOnRefreshListener {
+            viewModel.refreshImages()
+        }
+        swipeRefreshLayout.setColorSchemeResources(
+            R.color.purple_500,
+            R.color.teal_200
+        )
+    }
 
     private fun setupRecyclerView() {
+        // Set up adapter
         adapter = ImageAdapter { imageItem ->
             val imageUri = Uri.parse(imageItem.uri)
             progressBar.visibility = View.VISIBLE
@@ -115,75 +136,71 @@ class ImagePickerDialog : DialogFragment() {
                 }
             }
         }
-        recyclerView.layoutManager = GridLayoutManager(requireContext(), 3)
+        // Set up RecyclerView
+        val layoutManager = GridLayoutManager(requireContext(), 3)
+        recyclerView.layoutManager = layoutManager
         recyclerView.adapter = adapter
     }
 
     private fun observeViewModel() {
         viewModel.galleryData.observe(viewLifecycleOwner) { images ->
-            adapter.submitList(images.filter { it.type == ImageItem.MediaType.IMAGE })
+            val imageList = images.filter { it.type == ImageItem.MediaType.IMAGE }
+            adapter.submitList(imageList)
+            
+            if (imageList.isEmpty()) {
+                noImagesText.visibility = View.VISIBLE
+            } else {
+                noImagesText.visibility = View.GONE
+            }
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+            progressBar.visibility = if (isLoading && adapter.itemCount == 0) View.VISIBLE else View.GONE
+            swipeRefreshLayout.isRefreshing = isLoading && adapter.itemCount > 0
         }
     }
 
     private fun checkPermissionAndLoadImages() {
-        when {
+        Log.d(TAG, "Checking permissions")
+        val context = requireContext()
+        val hasPermission = when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
-                // For Android 13 and above
-                if (ContextCompat.checkSelfPermission(
-                    requireContext(),
+                ContextCompat.checkSelfPermission(
+                    context,
                     Manifest.permission.READ_MEDIA_IMAGES
-                ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    requestPermissions(
-                        arrayOf(Manifest.permission.READ_MEDIA_IMAGES),
-                        REQUEST_READ_STORAGE
-                    )
-                } else {
-                    viewModel.loadImages()
-                }
-            }
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
-                // For Android 10-12
-                if (ContextCompat.checkSelfPermission(
-                    requireContext(),
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    requestPermissions(
-                        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
-                        REQUEST_READ_STORAGE
-                    )
-                } else {
-                    viewModel.loadImages()
-                }
+                ) == PackageManager.PERMISSION_GRANTED
             }
             else -> {
-                // For Android 9 and below
-                if (ContextCompat.checkSelfPermission(
-                    requireContext(),
+                ContextCompat.checkSelfPermission(
+                    context,
                     Manifest.permission.READ_EXTERNAL_STORAGE
-                ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    requestPermissions(
-                        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
-                        REQUEST_READ_STORAGE
-                    )
-                } else {
-                    viewModel.loadImages()
-                }
+                ) == PackageManager.PERMISSION_GRANTED
             }
+        }
+
+        Log.d(TAG, "Has permission: $hasPermission")
+
+        if (hasPermission) {
+            viewModel.loadImages()
+        } else {
+            val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                Manifest.permission.READ_MEDIA_IMAGES
+            } else {
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            }
+            requestPermissions(arrayOf(permission), REQUEST_READ_STORAGE)
         }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        if (requestCode == REQUEST_READ_STORAGE && grantResults.isNotEmpty() && 
-            grantResults[0] == PackageManager.PERMISSION_GRANTED
-        ) {
-            viewModel.loadImages()
+        Log.d(TAG, "Permission result: ${grantResults.firstOrNull()}")
+        if (requestCode == REQUEST_READ_STORAGE && grantResults.isNotEmpty()) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                viewModel.loadImages()
+            } else {
+                Toast.makeText(context, "Permission required to access images", Toast.LENGTH_LONG).show()
+                dismiss()
+            }
         }
     }
 

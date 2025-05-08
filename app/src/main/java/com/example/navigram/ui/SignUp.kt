@@ -1,46 +1,45 @@
 package com.example.navigram.ui
 
-import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModelProvider
 import com.example.navigram.MainActivity
 import com.example.navigram.R
 import com.example.navigram.databinding.ActivitySignUpBinding
 import com.example.navigram.ui.login.LoginActivity
-import com.example.navigram.ui.login.LoginResponse
-import com.example.navigram.ui.login.clearToken
 import com.example.navigram.ui.login.saveToken
+import com.example.navigram.data.api.ApiService
+import com.example.navigram.data.api.SignUpRequest
+import com.example.navigram.data.api.SignUpResponse
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import java.io.OutputStreamWriter
-import java.net.HttpURLConnection
-import java.net.URL
-
-// Data class for Sign-Up Response
-data class SignUpResponse(
-    val token: String,
-    val username: String,
-    val status: Int
-)
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import java.io.IOException
 
 class SignUp : AppCompatActivity() {
+    private lateinit var apiService: ApiService
 
     private lateinit var binding: ActivitySignUpBinding
     private val _text = MutableLiveData<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialize Retrofit and ApiService
+        val retrofit = Retrofit.Builder()
+            .baseUrl(getString(R.string.BaseURL))
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        
+        apiService = retrofit.create(ApiService::class.java)
 
         binding = ActivitySignUpBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -115,50 +114,33 @@ class SignUp : AppCompatActivity() {
         }
     }
 
-    // Function to send registration data to server
     private suspend fun registerToNetwork(username: String, password: String, email: String): String {
         return withContext(Dispatchers.IO) {
-            val url = URL("${getString(R.string.BaseURL)}/api/auth/register")
-            (url.openConnection() as HttpURLConnection).run {
-                requestMethod = "POST"
-                connectTimeout = 10000
-                readTimeout = 10000
-                setRequestProperty("Content-Type", "application/json")
-                doOutput = true
-
-                val jsonPayload = JSONObject().apply {
-                    put("username", username)
-                    put("password", password)
-                    put("email", email)
+            try {
+                val signUpRequest = SignUpRequest(username, password, email)
+                val response = apiService.register(signUpRequest)
+                
+                when {
+                    response.isSuccessful -> {
+                        val signUpResponse = response.body()
+                        if (signUpResponse != null) {
+                            Gson().toJson(signUpResponse)
+                        } else {
+                            "Error: Empty response from server"
+                        }
+                    }
+                    response.code() == 409 -> "User already exists"
+                    response.code() == 400 -> "Invalid input data"
+                    response.code() == 500 -> "Server error occurred"
+                    else -> {
+                        val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                        "Error: ${response.code()} - $errorBody"
+                    }
                 }
-
-                try {
-                    OutputStreamWriter(outputStream).use { writer ->
-                        writer.write(jsonPayload.toString())
-                        writer.flush()
-                    }
-
-                    val responseText = when (responseCode) {
-                        HttpURLConnection.HTTP_OK -> {
-                            inputStream.bufferedReader().use { it.readText() }
-                        }
-                        else -> {
-                            val errorStream = errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-                            println("Debug - Error Response: $errorStream") // Debug log
-                            errorStream
-                        }
-                    }
-                    println("Debug - Response Code: $responseCode") // Debug log
-                    println("Debug - Response: $responseText") // Debug log
-                    responseText
-                } catch (e: Exception) {
-                    println("Debug - Exception: ${e.message}") // Debug log
-                    when (responseCode) {
-                        409 -> "User already exists"
-                        400 -> "Invalid input data"
-                        500 -> "Server error occurred"
-                        else -> "Network error: ${e.message ?: "Unknown error"}"
-                    }
+            } catch (e: Exception) {
+                when (e) {
+                    is IOException -> "Network error: Please check your internet connection"
+                    else -> "Unexpected error: ${e.localizedMessage}"
                 }
             }
         }
