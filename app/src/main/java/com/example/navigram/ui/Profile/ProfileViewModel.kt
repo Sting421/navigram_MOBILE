@@ -60,7 +60,9 @@ class ProfileViewModel(private val context: Context) : ViewModel() {
             .build()
     }
 
-    private val apiService = retrofit.create(ApiService::class.java)
+    private val _apiService = retrofit.create(ApiService::class.java)
+    val apiService: ApiService
+        get() = _apiService
 
     private val _userData = MutableStateFlow<UserData?>(null)
     val userData: StateFlow<UserData?> = _userData.asStateFlow()

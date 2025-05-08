@@ -281,7 +281,7 @@ class ProfileFragment : Fragment() {
 
                 launch {
                     viewModel.selectedMemory.collect { memory ->
-                        // Memory selection is handled by showMemoryDetailsDialog
+
                     }
                 }
             }
@@ -347,66 +347,12 @@ class ProfileFragment : Fragment() {
     }
 
      fun showMemoryDetailsDialog(memory: com.example.navigram.data.api.CreateMemoryResponse) {
-        val dialog = Dialog(requireContext())
-        dialog.setContentView(R.layout.dialog_memory_details)
-
-        // Initialize dialog views
-        val memoryImage = dialog.findViewById<ImageView>(R.id.memory_image)
-        val memoryDescription = dialog.findViewById<TextView>(R.id.memory_description)
-        val memoryDate = dialog.findViewById<TextView>(R.id.memory_date)
-
-        // Load memory data
-        Glide.with(requireContext())
-            .load(memory.mediaUrl)
-            .centerCrop()
-            .placeholder(R.drawable.navigramlogo)
-            .error(R.drawable.navigramlogo)
-            .into(memoryImage)
-
-        memoryDescription.text = memory.description
-        val date = LocalDateTime.parse(memory.createdAt.trim(), inputFormat).toLocalDate()
-        memoryDate.text = outputFormat.format(date)
-
-        // Get location data
-        val memoryLocation = dialog.findViewById<TextView>(R.id.memory_location)
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                val locationText = withContext(Dispatchers.IO) {
-                    val request = Request.Builder()
-                        .url("https://address-from-to-latitude-longitude.p.rapidapi.com/geolocationapi?lat=${memory.latitude}&lng=${memory.longitude}")
-                        .get()
-                        .addHeader("x-rapidapi-key", "fc33d176bdmsh77abb4787653b11p100a6cjsn63a64fd53e22")
-                        .addHeader("x-rapidapi-host", "address-from-to-latitude-longitude.p.rapidapi.com")
-                        .build()
-
-                    val response = client.newCall(request).execute()
-                    val responseBody = response.body?.string()
-                    Log.d(TAG, "API Response: $responseBody")
-                    val jsonResponse = JSONObject(responseBody ?: "{}")
-
-                    val results = jsonResponse.optJSONArray("Results")
-                    Log.d(TAG, "Results array: ${results?.toString(2)}")
-                    val address = if (results != null && results.length() > 0) {
-                        val firstResult = results.getJSONObject(0)
-                        firstResult.optString("address", "Location not available")
-                    } else {
-                        "Location not available"
-                    }
-                    "📍 $address"
-                }
-                memoryLocation.text = locationText
-            } catch (e: Exception) {
-                Log.e(TAG, "Error fetching location: ${e.message}", e)
-                memoryLocation.text = "📍 Location not available"
-            }
-        }
-
-        // Set up close button
-        dialog.findViewById<Button>(R.id.close_button).setOnClickListener {
-            dialog.dismiss()
-            viewModel.clearSelectedMemory()
-        }
-
+        val dialog = com.example.navigram.ui.memory.MemoryDetailsDialog(
+            requireContext(),
+            memory,
+            viewModel.apiService,
+            viewLifecycleOwner.lifecycleScope
+        )
         dialog.show()
     }
 
@@ -456,4 +402,5 @@ class ProfileFragment : Fragment() {
         super.onPause()
         map.onPause()
     }
+
 }
